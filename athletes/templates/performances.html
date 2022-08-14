@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Leistungen{% endblock %}
+{% block content %}
+
+<div class="container emp-profile shadow-lg" style="padding-top: 30px">
+  <div class="row">
+    <div class="col-md-6">
+        <div class="profile-head" style="float: left; width: 80%; clear: right;">
+          <h2>
+            <b>Leistungen</b>
+          </h2>
+      </div>
+    </div>
+  </div>
+
+  <div style="width: 100vw; max-width: 800px;">
+    <table class="table">
+      <thead class="thead-dark">
+        <tr>
+          <th scope="col">Datum</th>
+          <th scope="col">Ort</th>
+          <th scope="col">Athlet</th>
+          <th scope="col">Disziplin</th>
+          <th scope="col">Leistung</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for performance in performances %}
+        <tr>
+          <td>{{ performance.date }}</td>
+          <td>{{ performance.city }}</td>
+          <td>{{ performance.athlete_id }}</td>
+          <td>{{ performance.discipline }}</td>
+          <td>{{ performance.value }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block title %}Athleten{% endblock %}
+{% block content %}
+
+<div class="container emp-profile shadow-lg" style="padding-top: 30px">
+  <div class="row">
+    <div class="col-md-6">
+        <div class="profile-head" style="float: left; width: 80%; clear: right;">
+          <h2>
+            <b>Athleten</b>
+          </h2>
+      </div>
+    </div>
+  </div>
+
+  <div style="width: 100vw; max-width: 800px;">
+    <table class="table">
+      <thead class="thead-dark">
+        <tr>
+          <th scope="col">Name</th>
+          <th scope="col">Jahrgang</th>
+          <th scope="col">Geschlecht</th>
+          <th scope="col">Athleten Nummer (ladv)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for athlete in athletes %}
+        <tr>
+          <td>{{ athlete.name }}</td>
+          <td>{{ athlete.year_of_birth }}</td>
+          <td> {{ athlete.gender }}</td>
+          <td> {{ athlete.ladv_athlete_number }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}

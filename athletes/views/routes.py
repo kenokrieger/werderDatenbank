@@ -48,8 +48,10 @@ def show_results(meeting_id):
     for name in athletes:
         athlete = Athlete.query.filter_by(name=name).first()
         if athlete is None:
-            print(name)
+            for performance in athletes[name]:
+                performance["pborsb"] = "?"
             continue
+
         for performance in athletes[name]:
             performance["pborsb"] = ""
             date = performance["date"]
@@ -61,7 +63,7 @@ def show_results(meeting_id):
             except ValueError:
                 placement = 0
 
-            existing_entry = Performance.query.filter_by(date=date, value=value).first()
+            existing_entry = Performance.query.filter_by(date=date, value=value, athlete_id=athlete.id).first()
             if existing_entry:
                 if existing_entry.placement is None:
                     existing_entry.placement = placement
@@ -80,15 +82,12 @@ def show_results(meeting_id):
                     wind=float(wind) if wind else None,
                     placement=placement,
                     championship=None,
-                    indoor=2 < month < 11
+                    indoor=not 2 < month < 11
                 )
                 db.session.add(new_performance)
                 entry = new_performance
 
-            if athlete.is_personal_best(entry.discipline, entry.value, date):
-                performance["pborsb"] = "PB"
-            elif athlete.is_seasons_best(entry.discipline, entry.value, date):
-                performance["pborsb"] = "SB"
+            performance["pborsb"] = athlete.is_record(entry.discipline, entry.value, date)
 
     db.session.commit()
     page = render_template("results.html", title=title, athletes=athletes)

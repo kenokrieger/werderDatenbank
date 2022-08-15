@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from athletes import db
 from athletes.map import map_to_number, get_season_start
@@ -54,6 +54,47 @@ class Athlete(db.Model):
 
     def is_seasons_best(self, discipline, value, date=None):
         return value == self.get_seasons_best(discipline, date)
+
+    def is_record(self, discipline, value, date=None):
+        if date is None:
+            date = datetime.today()
+        if type(date) == str:
+            date = datetime.strptime(date, "%d.%m.%Y")
+        date -= timedelta(days=1)
+        pb = self.get_personal_best(discipline, date)
+        sb = self.get_seasons_best(discipline, date)
+
+        print(self.name)
+        print(pb)
+        print(sb)
+        if not pb:
+            return "PB"
+        ascending = ASCENDING.get(discipline, False)
+
+        if ascending:
+            if map_to_number(value) > map_to_number(pb):
+                return "PB"
+            if value == pb:
+                return "=PB"
+            if not sb:
+                return "SB"
+            if map_to_number(value) > map_to_number(sb):
+                return "SB"
+            if value == sb:
+                return "=SB"
+        else:
+            if map_to_number(value) < map_to_number(pb):
+                return "PB"
+            if value == pb:
+                return "=PB"
+            if not sb:
+                return "SB"
+            if map_to_number(value) < map_to_number(sb):
+                return "SB"
+            if value == sb:
+                return "=SB"
+
+        return ""
 
 
 class Performance(db.Model):

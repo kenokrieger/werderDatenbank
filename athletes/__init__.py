@@ -16,7 +16,7 @@ def init_app():
 
     with app.app_context():
         # this import allows us to create the table if it does not exist
-        from athletes.models.models import User, Athlete, Performance
+        from athletes.models.models import Athlete, Performance
         db.create_all()
 
         from athletes.views.routes import views

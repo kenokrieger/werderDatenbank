@@ -2,14 +2,6 @@ from datetime import datetime, timedelta
 
 from athletes import db
 from athletes.map import map_to_number, get_season_start
-from flask_login import UserMixin
-
-
-class User(db.Model, UserMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(150))
-    password = db.Column(db.String(150))
-    admin = db.Column(db.Boolean)
 
 
 class Athlete(db.Model):
@@ -25,9 +17,12 @@ class Athlete(db.Model):
             date = datetime.today()
         if type(date) == str:
             date = datetime.strptime(date, "%d.%m.%Y")
-        performances = Performance.query.filter_by(athlete_id=self.id, discipline=discipline)
-        performances = [p for p in performances if datetime.strptime(p.date, "%d.%m.%Y") <= date]
-        for pb in sorted([p.value for p in performances], key=map_to_number, reverse=ASCENDING.get(discipline, False)):
+        performances = Performance.query.filter_by(
+            athlete_id=self.id, discipline=discipline)
+        performances = [p for p in performances if datetime.strptime(
+            p.date, "%d.%m.%Y") <= date]
+        for pb in sorted([p.value for p in performances], key=map_to_number,
+                         reverse=ASCENDING.get(discipline, False)):
             if map_to_number(pb) > 0:
                 return pb
         return ""
@@ -38,13 +33,15 @@ class Athlete(db.Model):
         if type(date) == str:
             date = datetime.strptime(date, "%d.%m.%Y")
         season_start = get_season_start(date)
-        performances = Performance.query.filter_by(athlete_id=self.id, discipline=discipline)
+        performances = Performance.query.filter_by(
+            athlete_id=self.id, discipline=discipline)
         season_performances = []
         for p in performances:
             pdate = datetime.strptime(p.date, "%d.%m.%Y")
             if season_start <= pdate <= date:
                 season_performances.append(p.value)
-        for sb in sorted(season_performances, key=map_to_number, reverse=ASCENDING.get(discipline, False)):
+        for sb in sorted(season_performances, key=map_to_number,
+                         reverse=ASCENDING.get(discipline, False)):
             if map_to_number(sb) > 0:
                 return sb
         return ""
@@ -61,37 +58,42 @@ class Athlete(db.Model):
         if type(date) == str:
             date = datetime.strptime(date, "%d.%m.%Y")
         date -= timedelta(days=1)
-        pb = self.get_personal_best(discipline, date)
-        sb = self.get_seasons_best(discipline, date)
+        previous_pb = self.get_personal_best(discipline, date)
+        previous_sb = self.get_seasons_best(discipline, date)
 
-        print(self.name)
-        print(pb)
-        print(sb)
-        if not pb:
+        pb_rating = map_to_number(previous_pb)
+        sb_rating = map_to_number(previous_sb)
+        performance_rating = map_to_number(value)
+
+        if performance_rating < 0:
+            return ""
+
+        if not previous_pb:
             return "PB"
+
         ascending = ASCENDING.get(discipline, False)
 
         if ascending:
-            if map_to_number(value) > map_to_number(pb):
+            if performance_rating > pb_rating:
                 return "PB"
-            if value == pb:
+            if value == previous_pb:
                 return "=PB"
-            if not sb:
+            if not previous_sb:
                 return "SB"
-            if map_to_number(value) > map_to_number(sb):
+            if performance_rating > sb_rating:
                 return "SB"
-            if value == sb:
+            if value == previous_sb:
                 return "=SB"
         else:
-            if map_to_number(value) < map_to_number(pb):
+            if performance_rating < pb_rating:
                 return "PB"
-            if value == pb:
+            if value == previous_pb:
                 return "=PB"
-            if not sb:
+            if not previous_sb:
                 return "SB"
-            if map_to_number(value) < map_to_number(sb):
+            if performance_rating < sb_rating:
                 return "SB"
-            if value == sb:
+            if value == previous_sb:
                 return "=SB"
 
         return ""

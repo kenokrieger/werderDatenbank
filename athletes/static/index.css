@@ -180,3 +180,41 @@ span.active {
   display: inline-block;
   transition: background-color 0.3s ease;
 }
+
+a:link,
+a:visited,
+a:hover,
+a:active {
+	color: #000;
+	text-decoration: none;
+}
+
+th a,
+td a {
+    cursor: pointer;
+	display: block;
+	width: 100%;
+}
+th a.sort-by {
+	padding-right: 18px;
+	position: relative;
+}
+a.sort-by:before,
+a.sort-by:after {
+	border: 4px solid transparent;
+	content: "";
+	display: block;
+	height: 0;
+	right: 5px;
+	top: 50%;
+	position: absolute;
+	width: 0;
+}
+a.sort-by:before {
+	border-bottom-color: #ffffff;
+	margin-top: -9px;
+}
+a.sort-by:after {
+	border-top-color: #ffffff;
+	margin-top: 1px;
+}

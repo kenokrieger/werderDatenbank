@@ -2,7 +2,7 @@
 {% block title %}Ergebnis Übersicht{% endblock %}
 {% block content %}
 
-  {% if athletes is none %}
+  {% if results is none %}
     <form method="post" style="color: rgb(203, 248, 214);">
         <div class="form-group">
           <div align="center">
@@ -33,44 +33,129 @@
         </div>
       </div>
 
-      {% for athlete in athletes %}
-      <ul class="nav nav-tabs" id="myTab2" role="tablist">
-        <li class="nav-item">
-          <a class="nav-link active" id="home-tab2" data-toggle="tab"
-             href="#home" role="tab" aria-controls="home" aria-selected="true">{{ athlete }}</a>
-        </li>
-      </ul>
-
-      <div style="width: 100vw; max-width: 800px;">
+      <div style="width: 100vw; max-width: 1000px; overflow: scroll;">
         <table class="table">
           <thead class="thead-dark">
             <tr>
-              <th scope="col">Disziplin</th>
-              <th scope="col">Altersklasse</th>
+              <th scope="col"><a class="sort-by" onclick="sortResults('Name')">Name</a></th>
+              <th scope="col"><a class="sort-by" onclick="sortResults('Disziplin')">Disziplin</a></th>
+              <th scope="col"><a class="sort-by" onclick="sortResults('Altersklasse')">Altersklasse</a></th>
               <th scope="col"></th>
-              <th scope="col">Platzierung</th>
+              <th scope="col"><a class="sort-by" onclick="sortResults('Platzierung')">Platzierung</a></th>
               <th scope="col">Leistung</th>
-              <th scope="col">Wind</th>
-              <th scope="col"></th>
+              <th scope="col"><a class="sort-by" onclick="sortResults('SB/PB')">SB/PB</a></th>
             </tr>
           </thead>
-          <tbody>
-            {% for event in athletes[athlete] %}
+          <tbody id="table-body">
+          {% for result in results %}
             <tr>
-              <td>{{ event["event"] }}</td>
-              <td>{{ event["agegroup"] }}</td>
-              <td>{{ event["subtitle"] }}</td>
-              <td>{{ event["rank"] }}</td>
-              <td>{{ event["result"] }}</td>
-              <td>{{ event["wind"] }}</td>
-              <td><b>{{ event["pborsb"] }}</b></td>
+              <td>{{ result["name"] }}</td>
+              <td>{{ result["event"] }}</td>
+              <td>{{ result["agegroup"] }}</td>
+              <td>{{ result["subtitle"] }}</td>
+              <td>{{ result["rank"] }}</td>
+              <td>{{ result["result"] + (" ({})".format(result["wind"]) if result["wind"] else "") }}</td>
+              <td><b>{{ result["pborsb"] }}</b></td>
             </tr>
-            {% endfor %}
+          {% endfor %}
           </tbody>
         </table>
       </div>
-      {% endfor %}
+
     </div>
   {% endif %}
 
+  <script>
+    let results = JSON.parse('{{ json_results | safe }}');
+    console.log(results);
+
+    function writeResultsToTable(results) {
+        const tableBody = document.getElementById("table-body");
+        let html = ""
+
+        for (let i=0; i<results.length; i++) {
+            html += "<tr>"
+            html += "<td>" + results[i].name + "</td>";
+            html += "<td>" + results[i].event + "</td>";
+            html += "<td>" + results[i].agegroup + "</td>";
+            html += "<td>" + results[i].subtitle + "</td>";
+            html += "<td>" + results[i].rank + "</td>";
+            if (results[i].wind) {
+                html += "<td>" + results[i].result + " (" + results[i].wind + ")</td>";
+            } else {
+                html += "<td>" + results[i].result + "</td>";
+            }
+            html += "<td><b>" + results[i].pborsb + "</b></td>";
+            html += "</tr>";
+        }
+        tableBody.innerHTML = html
+    }
+
+    function pbToNumber(s) {
+        if (s === "PB") {
+            return 5;
+        }
+        if (s === "=PB") {
+            return 4;
+        }
+        if (s === "SB") {
+            return 3;
+        }
+        if (s === "=SB") {
+            return 2;
+        }
+        if (s === "?") {
+            return 1;
+        }
+        return 0;
+    }
+
+    let reverse_name = 1;
+    let reverse_event = 1;
+    let reverse_agegroup = 1;
+    let reverse_rank = 1;
+    let reverse_pb = 1;
+    function sortResults(key) {
+        if (key === 'Name') {
+          results.sort((a, b) => reverse_name * a.familyname.localeCompare(b.familyname));
+          reverse_name *= -1;
+        }
+        if (key === 'Disziplin') {
+          results.sort((a, b) => reverse_event * a.event.localeCompare(b.event));
+          reverse_event *= -1;
+        }
+        if (key === 'Altersklasse') {
+          results.sort((a, b) => reverse_agegroup * a.agegroup.localeCompare(b.agegroup));
+          reverse_agegroup *= -1;
+        }
+        if (key === 'Platzierung') {
+          results.sort(function (a, b){
+            if (a.rank === b.rank)
+              return 0;
+            if (parseInt(a.rank) < parseInt(b.rank)) {
+              return reverse_rank * -1;
+            }
+            return reverse_rank;
+            });
+          reverse_rank *= -1;
+        }
+        if (key === 'SB/PB') {
+          results.sort(function(a, b){
+              let compareResult = -1;
+              if (a.pborsb === b.pborsb) {
+                  compareResult = 0;
+              }
+              if (pbToNumber(a.pborsb) < pbToNumber(b.pborsb)) {
+                  compareResult = 1;
+              }
+              return reverse_pb * compareResult;
+          });
+          reverse_pb *= -1;
+        }
+
+        writeResultsToTable(results);
+        console.log(results);
+
+    }
+  </script>
 {% endblock %}

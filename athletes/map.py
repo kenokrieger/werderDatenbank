@@ -56,6 +56,7 @@ DISCIPLINE_MAPPER = {
     "Siebenkampf": "7-K",
     "Stabhochsprung": "STA",
     "1500 m": "1K5",
+    "1.500 m": "1K5",
     "Fünfkampf": "5-K",
     "Zehnkampf": "10-K",
     "SCH": "SCH",
@@ -70,7 +71,7 @@ def map_discipline(disc):
     for discipline in DISCIPLINE_MAPPER:
         if discipline in disc:
             return DISCIPLINE_MAPPER[discipline]
-    print("No mapping found")
+    print(f"No mapping found for '{disc}'")
     return disc
 
 

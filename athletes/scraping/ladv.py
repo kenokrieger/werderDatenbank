@@ -1,11 +1,10 @@
 import os
 from dotenv import load_dotenv
-import json
 import requests
 from bs4 import BeautifulSoup
 import re
 
-RESULT_URL = "https://ladv.de/ergebnisse/{}/"
+LADV_RESULT_URL = "https://ladv.de/ergebnisse/{}/"
 CLUB_NAME = "SV Werder Bremen"
 MEETING_ID = 63362
 
@@ -28,7 +27,6 @@ def main():
     print_out = show_results(athletes, meeting_info)
     with open("results.txt", "w") as f:
         f.write(print_out)
-
     print(print_out)
 
 
@@ -42,8 +40,8 @@ def get_meeting_info(soup):
 
 
 def find_results(meeting_id):
-    athletes = dict()
-    url = RESULT_URL.format(meeting_id)
+    results = []
+    url = LADV_RESULT_URL.format(meeting_id)
     response = requests.get(url)
 
     if response.status_code != 200:
@@ -75,7 +73,9 @@ def find_results(meeting_id):
             if name_div is None:
                 continue
             names = [c.strip() for c in name_div.text.split(",")]
-            name = names[-1] + " " + names[0]
+            surname = names[-1]
+            family_name = names[0]
+            name = f"{surname} {family_name}"
             rank = row.find("div", class_=CLASSES["rank"])
             result = row.find("div", class_=CLASSES["result"])
             wind = row.find("div", class_=CLASSES["wind"])
@@ -88,22 +88,22 @@ def find_results(meeting_id):
             if break_loop:
                 continue
 
-            if athletes.get(name) is None:
-                athletes[name] = []
-
-            athletes[name].append(
+            results.append(
                 {
+                    "name": name,
+                    "surname": surname,
+                    "familyname": family_name,
                     "event": event,
                     "agegroup": agegroup,
                     "subtitle": subtitle,
                     "result": result.text,
                     "rank": rank.text,
-                    "wind": wind.text.strip(),
-                    "date": date.text
+                    "date": date.text,
+                    "wind": wind.text.strip()
                 }
             )
 
-    return meeting_info, athletes
+    return meeting_info, results
 
 
 def show_results(athletes, meeting_info):
@@ -123,7 +123,7 @@ def show_results(athletes, meeting_info):
     return print_out
 
 
-def get_werder_events(year):
+def get_werder_results(year):
     load_dotenv()
     api_key = os.getenv('LADV-API-KEY')
     WERDER_NUMBER = 25
@@ -131,17 +131,17 @@ def get_werder_events(year):
     url = f"https://ladv.de/api/{api_key}/veaList?vereinnumber={WERDER_NUMBER}&limit=200&datayear={year}&lv={LV}"
     r = requests.get(url)
     events = r.json()
+    return events
 
-    for event in events:
-        r = requests.get(event["url"])
-        soup = BeautifulSoup(r.content, 'html.parser')
-        link = soup.find("a", class_="ergxml")
-        if link is None:
-            print(event)
-            continue
-        result_id = re.search("(?<=/ergebnisse/)[0-9]*", link.attrs["href"]).group(0)
-        event["id"] = result_id
 
+def get_werder_events():
+    load_dotenv()
+    api_key = os.getenv('LADV-API-KEY')
+    WERDER_NUMBER = 25
+    LV = "BR"
+    url = f"https://ladv.de/api/{api_key}/meldList?vereinnumber={WERDER_NUMBER}&limit=200&lv={LV}"
+    r = requests.get(url)
+    events = r.json()
     return events
 
 

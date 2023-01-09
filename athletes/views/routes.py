@@ -41,7 +41,7 @@ def show_results(meeting_id):
     meeting_info, results = find_results(meeting_id)
 
     if meeting_info is None:
-        return "Keine Ergebnisse verfügbar, vielleicht kannst du sie hier finden: https://ladv.de/ausschreibung/detail/{}/".format(meeting_id)
+        return "Keine Ergebnisse verfügbar, vielleicht kannst du sie hier finden: https://ladv.de/veranstaltung/detail/{}/".format(meeting_id)
     title = f"{meeting_info['title']} am {meeting_info['date']}" \
             f" in {meeting_info['city']}\n"
 

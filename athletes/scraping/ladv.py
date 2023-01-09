@@ -131,6 +131,17 @@ def get_werder_results(year):
     url = f"https://ladv.de/api/{api_key}/veaList?vereinnumber={WERDER_NUMBER}&limit=200&datayear={year}&lv={LV}"
     r = requests.get(url)
     events = r.json()
+
+    for event in events:
+        r = requests.get(event["url"])
+        soup = BeautifulSoup(r.content, 'html.parser')
+        link = soup.find("a", class_="ergxml")
+        if link is None:
+            print(event)
+            continue
+        result_id = re.search("(?<=/ergebnisse/)[0-9]*", link.attrs["href"]).group(0)
+        event["id"] = result_id
+
     return events
 
 
@@ -147,4 +158,4 @@ def get_werder_events():
 
 if __name__ == "__main__":
     # main()
-    print(get_werder_events())
+    print(get_werder_results(2022))

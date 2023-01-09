@@ -6,7 +6,7 @@ import json
 from athletes.models.models import Athlete, Performance
 from athletes import init_app, db
 
-OLD_DB_PATH = "/home/keno/Projects/Athlete_Database/database/raw/"
+OLD_DB_PATH = "./athlete_data/"
 
 
 def main():
@@ -17,9 +17,29 @@ def main():
             data.append(json.load(f))
     with app.app_context():
         for entry in data:
-            athlete_id = Athlete.query.filter_by(name=entry["name"]).first().id
+            athlete = Athlete.query.filter_by(name=entry["name"]).first()
+            if athlete is None:
+                new_athlete = Athlete(
+                    name=entry["name"],
+                    year_of_birth=entry["birthyear"],
+                    gender=entry["gender"],
+                    ladv_athlete_number=entry["athlete_number"],
+                    ladv_id=entry["id"]
+                )
+                db.session.add(new_athlete)
+                athlete_id = new_athlete.id
+            else:
+                athlete_id = athlete.id
+            existing_performances = Performance.query.filter_by(athlete_id=athlete_id)
+
             performances = entry["performances"]
+
             for p in performances:
+                for existing_p in existing_performances:
+                    if existing_p.date == p["date"] and existing_p.city == p["city"]:
+                        print("Performance exists!")
+                        continue
+
                 new_performance = Performance(
                     date=p["date"],
                     city=p["city"],

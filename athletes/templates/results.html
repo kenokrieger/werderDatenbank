@@ -6,13 +6,13 @@
     <form method="post" style="color: rgb(203, 248, 214);">
         <div class="form-group">
           <div align="center">
-                <label for="meeting_id">Wettkampf ID</label>
+                <label for="meeting_id">Ergebnislink</label>
                 <input
                     type="text"
                     class="form-control"
                     id="meeting_id"
                     name="meeting_id"
-                    maxlength="5"
+                    maxlength="1000"
                     style="width: 300px; border-radius: 15px; text-align: center"
                     required
                 />
@@ -29,6 +29,10 @@
               <h2>
                 <b>{{ title }}</b>
               </h2>
+            <form>
+              <input type="checkbox" id="only-finals" name="only-finals">
+              <label for="only-finals">Nur Final-Ergebnisse</label><br>
+            </form>
           </div>
         </div>
       </div>
@@ -67,6 +71,9 @@
 
   <script>
     let results = JSON.parse('{{ json_results | safe }}');
+    for (let i=0; i<results.length; i++) {
+        results[i].hide = false;
+    }
     console.log(results);
 
     function writeResultsToTable(results) {
@@ -74,6 +81,8 @@
         let html = ""
 
         for (let i=0; i<results.length; i++) {
+            if (results[i].hide)
+                continue;
             html += "<tr>"
             html += "<td>" + results[i].name + "</td>";
             html += "<td>" + results[i].event + "</td>";
@@ -157,5 +166,20 @@
         console.log(results);
 
     }
+    const checkboxFinals = document.getElementById('only-finals');
+    function hidePreEvents(event) {
+      if (event.currentTarget.checked) {
+        for (let i=0; i<results.length; i++) {
+            if (!((results[i].subtitle.includes("Rangfolge")) || (results[i].subtitle.includes("Final")))) {
+                results[i].hide = true;
+            }
+        }
+      } else {
+        for (let i=0; i<results.length; i++)
+          results[i].hide = false;
+      }
+      writeResultsToTable(results);
+    }
+    checkboxFinals.addEventListener('change', hidePreEvents)
   </script>
 {% endblock %}

@@ -1,13 +1,9 @@
-from pylatex import Document, Section, LongTable, MultiColumn, NewLine,\
+from pylatex import Document, Section, MultiColumn, NewLine,\
     MediumText, LargeText, LongTabu
 from pylatex.utils import bold
 
-import json
 
-
-if __name__ == '__main__':
-    with open("data.json", "r") as f:
-        data = json.load(f)
+def make_pdf(data, title, subtitle, name="main"):
     title = "23. Neujahrssportfest des SV Werder Bremen"
     subtitle = "am 14.01.2023 in Bremen"
     geometry_options = {
@@ -16,14 +12,14 @@ if __name__ == '__main__':
     }
     doc = Document(geometry_options=geometry_options, page_numbers=False)
     doc.change_length("\\tabulinesep", "4pt")
-
     with doc.create(Section(title, numbering=False)):
         doc.append(MediumText(bold(subtitle)))
         doc.append(NewLine())
         doc.append(NewLine())
         # Generate data table
         with doc.create(
-                LongTabu("X[2.5, l] X[1.5, l] X[r] X[1.5, r] X[r]")) as data_table:
+                LongTabu(
+                    "X[2.5, l] X[1.5, l] X[r] X[1.5, r] X[r]")) as data_table:
             header_row1 = ["Name", "", "Rang", "Leistung", "SB/PB"]
 
             for age in data:
@@ -47,4 +43,8 @@ if __name__ == '__main__':
                     data_table.add_empty_row()
                 data_table.add_empty_row()
                 data_table.add_empty_row()
-    doc.generate_pdf('full', clean_tex=False)
+    doc.generate_pdf(name, clean_tex=False)
+
+
+if __name__ == '__main__':
+    make_pdf()

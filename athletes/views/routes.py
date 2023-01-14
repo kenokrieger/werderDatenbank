@@ -46,6 +46,43 @@ def show_results(meeting_id):
             f" in {meeting_info['city']}\n"
 
     city = meeting_info["city"]
+    _update_database(city, results)
+    page = render_template("results.html", title=title, results=results,
+                           json_results=json.dumps(results))
+    with open(cached_file, "w", encoding="utf-8") as f:
+        f.write(page)
+    return page
+
+
+@views.route("/results/print-view/<int:meeting_id>")
+def print_results(meeting_id):
+    cached_file = "athletes/cache/{}_print.html".format(meeting_id)
+
+    if os.path.exists(cached_file):
+        with open(cached_file, "r", encoding="utf-8") as f:
+            return f.read()
+
+    meeting_info, results = find_results(meeting_id)
+    title = f"{meeting_info['title']} am {meeting_info['date']}" \
+            f" in {meeting_info['city']}\n"
+    _update_database(meeting_info['city'], results)
+
+    agegroups = sorted(list(set(r["agegroup"] for r in results)))
+    print_view = dict()
+    for agegroup in agegroups:
+        events = [r for r in results if r["agegroup"] == agegroup]
+        disc = sorted(list(set(e["event"] for e in events)))
+        print_view[agegroup] = {
+            d: [e for e in events if e["event"] == d] for d in disc
+        }
+
+    page = render_template("print_results.html", title=title, results=print_view)
+    with open(cached_file, "w", encoding="utf-8") as f:
+        f.write(page)
+    return page
+
+
+def _update_database(city, results):
     for result in results:
         athlete = Athlete.query.filter_by(name=result["name"]).first()
         if athlete is None:
@@ -87,14 +124,10 @@ def show_results(meeting_id):
             db.session.add(new_performance)
             entry = new_performance
 
-        result["pborsb"] = athlete.is_record(entry.discipline, entry.value, date)
-
+        result["pborsb"] = athlete.is_record(entry.discipline, entry.value,
+                                             date)
     db.session.commit()
-    page = render_template("results.html", title=title, results=results,
-                           json_results=json.dumps(results))
-    with open(cached_file, "w", encoding="utf-8") as f:
-        f.write(page)
-    return page
+    return results
 
 
 @views.route("/clear-results/<int:meeting_id>")

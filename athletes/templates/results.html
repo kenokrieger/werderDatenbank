@@ -24,7 +24,7 @@
   {% else %}
     <div class="container emp-profile shadow-lg" style="padding-top: 30px">
       <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-6" style="width: 80%;">
             <div class="profile-head" style="float: left; width: 100%; clear: right;">
               <h2>
                 <b>{{ title }}</b>
@@ -34,6 +34,9 @@
               <label for="only-finals">Nur Final-Ergebnisse</label><br>
             </form>
           </div>
+        </div>
+        <div style="width:10%;">
+          <button class="btn" onclick="printView()" style="border-radius: 12px;background: rgb(10, 87, 23); color: aliceblue;"><b>Druckansicht</b></button>
         </div>
       </div>
 
@@ -181,5 +184,13 @@
       writeResultsToTable(results);
     }
     checkboxFinals.addEventListener('change', hidePreEvents)
+  </script>
+  <script>
+    function printView() {
+      const url = window.location.href;
+      const split_url = url.split("/");
+      split_url.splice(split_url.length - 1, 0, "print-view");
+      location.replace(split_url.join("/"));
+    }
   </script>
 {% endblock %}

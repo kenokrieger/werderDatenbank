@@ -1,27 +1,27 @@
-from pylatex import Document, Section, MultiColumn, NewLine,\
-    MediumText, LargeText, LongTabu
+from pylatex import Document, Section, MultiColumn, NewLine, \
+    MediumText, LargeText, LongTabu, NoEscape, Package
 from pylatex.utils import bold
 
 
 def make_pdf(data, title, subtitle, name="main"):
-    title = "23. Neujahrssportfest des SV Werder Bremen"
-    subtitle = "am 14.01.2023 in Bremen"
     geometry_options = {
         "tmargin": "15mm", "lmargin": "20mm", "rmargin": "20mm",
         "bmargin": "20mm"
     }
     doc = Document(geometry_options=geometry_options, page_numbers=False)
     doc.change_length("\\tabulinesep", "4pt")
+    doc.packages.append(Package("xcolor"))
     with doc.create(Section(title, numbering=False)):
         doc.append(MediumText(bold(subtitle)))
         doc.append(NewLine())
         doc.append(NewLine())
         # Generate data table
+        fmt_string = r"\hspace*{-1mm}\colorbox{black!10}{\strut\parbox{\dimexpr\textwidth - 2\fboxsep\relax}{"
         with doc.create(
                 LongTabu(
                     "X[2.5, l] X[1.5, l] X[r] X[1.5, r] X[r]")) as data_table:
             header_row1 = ["Name", "", "Rang", "Leistung", "SB/PB"]
-
+            row_counter = 0
             for age in data:
                 data_table.add_row((MultiColumn(5, align='l',
                                                 data=LargeText(bold(age))),))
@@ -35,11 +35,18 @@ def make_pdf(data, title, subtitle, name="main"):
                     data_table.add_hline()
 
                     for r in data[age][disc]:
-                        row = [
-                            r["name"], r["subtitle"], r["rank"], r["result"],
-                            r["pborsb"]
-                        ]
+                        if row_counter % 2:
+                            row = [
+                                NoEscape(fmt_string + r["name"] + r"}}"),
+                                r["subtitle"], r["rank"], r["result"],
+                                r["pborsb"]
+                            ]
+                        else:
+                            row = [r["name"], r["subtitle"], r["rank"],
+                                   r["result"], r["pborsb"]
+                                   ]
                         data_table.add_row(row)
+                        row_counter += 1
                     data_table.add_empty_row()
                 data_table.add_empty_row()
                 data_table.add_empty_row()

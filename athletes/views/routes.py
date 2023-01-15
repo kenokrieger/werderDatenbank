@@ -82,7 +82,7 @@ def print_results(meeting_id):
 
     meeting_info, results = find_results(meeting_id)
     title = f"{meeting_info['title']}"
-    subtitle = "am {meeting_info['date']} in {meeting_info['city']}"
+    subtitle = f"am {meeting_info['date']} in {meeting_info['city']}"
     _update_database(meeting_info['city'], results)
 
     agegroups = sorted(list(set(r["agegroup"] for r in results)))

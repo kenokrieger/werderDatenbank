@@ -1,0 +1,196 @@
+<!--
+Copyright (c) 2024 Keno Krieger
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+{% extends "base.html" %}
+{% import "bootstrap/utils.html" as utils %}
+{% block title %}Datenbank{% endblock %}
+{% block content %}
+  <div class="container">
+  {%- with messages = get_flashed_messages(with_categories=True) %}
+  {%- if messages %}
+    <div class="row">
+      <div class="col-md-12">
+        {{ utils.flashed_messages(messages) }}
+      </div>
+    </div>
+  {%- endif %}
+  {%- endwith %}
+    <div class="jumbotron">
+      <h1>Datenbank</h1>
+      <form>
+        {% for input in form %}
+        <div class="form-group" style="width: 100px; float:left;">
+            <label for="{{ input["id"] }}">{{ input["label"] }}</label>
+            <input type="text" list="{{ input["list_id"] }}" class="form-control" id="{{ input["id"] }}" />
+            <datalist id="{{ input["list_id"] }}">
+              {% for option in input["options"] %}
+                <option>{{ option }}</option>
+              {% endfor %}
+            </datalist>
+        </div>
+        {% endfor %}
+        <div class="form-group" style="width: 150px; float:left;">
+            <label for="token">Access-Token</label>
+            <input type="text" class="form-control" id="token" />
+        </div>
+      <div style="width: 100%; float:left;">
+        <button class="btn btn-secondary" type="button" onclick="send_data()">Commit</button>
+      </div>
+      </form>
+    <br>
+      <div style="width: 100%; float:left; padding-top: 1em; font-size: larger"><span>Commit Status: </span><span id="commit-status"></span></div>
+      <table id="data" class="table">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col">ID</th>
+            <th scope="col">Date</th>
+            <th scope="col">City</th>
+            <th scope="col">Athlete ID</th>
+            <th scope="col">Discipline</th>
+            <th scope="col">Value</th>
+            <th scope="col">Unit</th>
+            <th scope="col">Wind</th>
+            <th scope="col">Placement</th>
+            <th scope="col">Championship</th>
+            <th scope="col">Indoor</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    <br>
+       <div id="confirmation-form" style="visibility: hidden;">
+      <div class="form-group">
+        <label for="entry-id">Found existing database entry! Type the ID of the entry to overwrite</label>
+        <input type="text" class="form-control" id="entry-id" />
+      </div>
+      <div class="form-group">
+        <button class="btn btn-success" type="button" onclick="cancel()">Abort</button>
+        <button class="btn btn-danger" type="button" onclick="send_data()">Overwrite</button>
+      </div>
+      </div>
+    </div>
+   </div>
+
+  <script>
+    let table;
+    $(document).ready(
+          function () {
+              table = new DataTable('#data', {
+                      paging: false,
+                      info: false,
+                  columnDefs: [
+                        {
+                          "defaultContent": "",
+                          "targets": '_all'
+                        }
+                    ]
+                  }
+              )
+          }
+    )
+    function cancel() {
+      let confirmationWindow = document.getElementById("confirmation-form")
+      document.getElementById("date").value = ""
+      document.getElementById("city").value = ""
+      document.getElementById("athlete").value = ""
+      document.getElementById("discipline").value = ""
+      document.getElementById("value").value = ""
+      document.getElementById("unit").value = ""
+      document.getElementById("wind").value = ""
+      document.getElementById("placement").value = ""
+      document.getElementById("championship").value = ""
+      document.getElementById("indoor").value = ""
+      confirmationWindow.style.visibility = "hidden"
+    }
+    function send_data() {
+        let token = document.getElementById("token").value.trim()
+        let id = -1
+        let date = document.getElementById("date").value.trim()
+        let city = document.getElementById("city").value.trim()
+        let athlete = document.getElementById("athlete").value.trim()
+        let discipline = document.getElementById("discipline").value.trim()
+        let value = document.getElementById("value").value.trim()
+        let unit = document.getElementById("unit").value.trim()
+        let wind = document.getElementById("wind").value.trim()
+        let placement = document.getElementById("placement").value.trim()
+        let championship = document.getElementById("championship").value.trim()
+        let indoor = document.getElementById("indoor").value.trim()
+        let overwrite = ""
+        let confirmationWindow = document.getElementById("confirmation-form")
+        if (confirmationWindow.style.visibility === "visible") {
+            overwrite = "1"
+            confirmationWindow.style.visibility = "hidden"
+            id = document.getElementById("entry-id").value.trim()
+            document.getElementById("entry-id").value = ""
+        }
+        fetch("{{ url_for("adddatabaseentry") }}?token=" + token + "&overwrite=" + overwrite,
+            {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                  "id": id,
+                  "date": date,
+                  "city": city,
+                  "athlete": athlete,
+                  "discipline": discipline,
+                  "value": value,
+                  "unit": unit,
+                  "wind": wind,
+                  "placement": placement,
+                  "championship": championship,
+                  "indoor": indoor
+              })
+            }
+      )
+      .then((response) => response.json())
+      .then((content) => {
+          let commitStatus = document.getElementById("commit-status")
+          commitStatus.innerHTML = content["status"]
+          if (content["status"] === "failed") {
+              commitStatus.innerHTML += " - Reason: " + content["value"]
+              return
+          }
+
+          table.clear()
+          if (content["status"] === "success") {
+              cancel()
+          }
+          if (content["status"] === "pending") {
+              const rows = [["Pending", date, city, athlete, discipline, value, unit,
+                            wind, placement, championship, indoor]]
+              for (let i=0; i < content.value.length; i++) {
+                rows[i + 1] = [content.value[i].id, content.value[i].date, content.value[i].city, content.value[i].athlete_id,
+                               content.value[i].discipline, content.value[i].value, content.value[i].unit,
+                               content.value[i].wind, content.value[i].placement, content.value[i].championship,
+                               content.value[i].indoor]
+              }
+              table.rows.add(rows)
+              confirmationWindow.style.visibility = "visible"
+          }
+          table.draw()
+      })
+    }
+   </script>
+{%- endblock %}

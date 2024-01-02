@@ -1,11 +1,16 @@
 import os
+from datetime import datetime
+
 from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
 import re
+import json
+
 
 LADV_RESULT_URL = "https://ladv.de/ergebnisse/{}/"
 CLUB_NAME = "SV Werder Bremen"
+CLUB_NUMBER = 25
 MEETING_ID = 63362
 
 # html classes for the respective fields
@@ -97,7 +102,7 @@ def find_results(meeting_id):
                     "agegroup": agegroup,
                     "subtitle": subtitle,
                     "result": result.text,
-                    "rank": rank.text,
+                    "rank": rank.text.strip(),
                     "date": date.text,
                     "wind": wind.text.strip()
                 }
@@ -123,7 +128,7 @@ def show_results(athletes, meeting_info):
     return print_out
 
 
-def get_werder_results(year):
+def get_werder_results(year, cache=None):
     load_dotenv()
     api_key = os.getenv('LADV-API-KEY')
     WERDER_NUMBER = 25
@@ -132,16 +137,29 @@ def get_werder_results(year):
     r = requests.get(url)
     events = r.json()
 
+    new_events = []
+    if cache is not None:
+        event_urls = [c["url"] for c in cache]
+    else:
+        event_urls = []
+
     for event in events:
+        if event["url"] in event_urls:
+            continue
         r = requests.get(event["url"])
         soup = BeautifulSoup(r.content, 'html.parser')
         link = soup.find("a", class_="ergxml")
         if link is None:
-            print(event)
-            continue
-        result_id = re.search("(?<=/ergebnisse/)[0-9]*", link.attrs["href"]).group(0)
-        event["id"] = result_id
+            pass
+        else:
+            result_id = re.search("(?<=/ergebnisse/)[0-9]*", link.attrs["href"]).group(0)
+            event["id"] = result_id
+        new_events.append(event)
 
+    if cache:
+        events = cache + new_events
+    with open(f"athletes/cache/events_{year}.json", "w") as f:
+        json.dump(events, f)
     return events
 
 
@@ -156,6 +174,49 @@ def get_werder_events():
     return events
 
 
+def get_upcoming_competitions(athlete_id):
+    load_dotenv()
+    api_key = os.getenv('LADV-API-KEY')
+    this_year = requests.get(f"https://ladv.de/api/{api_key}/athletDetail?id={athlete_id}&datayear={datetime.today().year}&meld=true")
+    next_year = requests.get(f"https://ladv.de/api/{api_key}/athletDetail?id={athlete_id}&datayear={datetime.today().year + 1}&meld=true")
+    if this_year.status_code != 200 or next_year.status_code != 200:
+        return {"error": "ladv returned an error"}
+
+    listings = this_year.json()[0].get("meldungen", [])
+    if next_year.json():
+        listings += next_year.json()[0].get("meldungen", [])
+    listings.sort(key=lambda x: x["datum"])
+    return [l for l in listings if datetime.strptime(l["datumText"], "%d.%m.%Y") >= datetime.today()]
+
+
+def get_ladv_id(athlete_name):
+    load_dotenv()
+    api_key = os.getenv("LADV-API-KEY")
+    r = requests.get(f"https://ladv.de/api/{api_key}/athletQuery?query={athlete_name}")
+    return r.json()[0]["id"]
+
+
+def get_athlete_info(athlete_id, start_year, end_year=datetime.now().year):
+    load_dotenv()
+    api_key = os.getenv("LADV-API-KEY")
+
+    response = {}
+    for year in range(start_year, end_year + 1):
+        r = requests.get(
+            f"https://ladv.de/api/{api_key}/athletDetail?id={athlete_id}&datayear={year}&leistung=true"
+        )
+        content = r.json()
+        if not content:
+            continue
+        previous_performances = response.get("leistungen", [])
+        new_performances = content[0]["leistungen"]
+        response.update(content[0])
+        if content[0].get("vereinnumber") == CLUB_NUMBER:
+            response["leistungen"] = previous_performances + new_performances
+    return response
+
+
 if __name__ == "__main__":
     # main()
-    print(get_werder_results(2022))
+    # print(get_werder_results(2022))
+    print(get_upcoming_competitions(450047))

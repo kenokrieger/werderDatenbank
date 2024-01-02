@@ -2,19 +2,20 @@
 {% block title %}Athleten{% endblock %}
 {% block content %}
 
-<div class="container emp-profile shadow-lg" style="padding-top: 30px">
-  <div class="row">
-    <div class="col-md-6">
-        <div class="profile-head" style="float: left; width: 80%; clear: right;">
-          <h2>
-            <b>Athleten</b>
-          </h2>
+<div class="container">
+  {%- with messages = get_flashed_messages(with_categories=True) %}
+  {%- if messages %}
+    <div class="row">
+      <div class="col-md-12">
+        {{ utils.flashed_messages(messages) }}
       </div>
     </div>
-  </div>
+  {%- endif %}
+  {%- endwith %}
+    <div class="jumbotron">
+      <h1>Athleten</h1>
 
-  <div style="width: 100vw; max-width: 800px;">
-    <table class="table">
+    <table id="athletes" class="table">
       <thead class="thead-dark">
         <tr>
           <th scope="col">Name</th>
@@ -26,7 +27,7 @@
       <tbody>
         {% for athlete in athletes %}
         <tr>
-          <td>{{ athlete.name }}</td>
+          <td><a href="{{ url_for("views.athlete_profile", athlete_id=athlete.id) }}">{{ athlete.name }}</a></td>
           <td>{{ athlete.year_of_birth }}</td>
           <td> {{ athlete.gender }}</td>
           <td> {{ athlete.ladv_athlete_number }}</td>
@@ -36,5 +37,12 @@
     </table>
   </div>
 </div>
+
+    <script>$(document).ready( function () {
+      new DataTable('#athletes', {
+          paging: true,
+          info: true,
+      });
+  } );</script>
 
 {% endblock %}

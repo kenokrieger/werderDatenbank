@@ -22,169 +22,86 @@
         </div>
     </form>
   {% else %}
-    <div class="container emp-profile shadow-lg" style="padding-top: 30px">
-      <div class="row">
-        <div class="col-md-6" style="width: 80%;">
-            <div class="profile-head" style="float: left; width: 100%; clear: right;">
-              <h2>
-                <b>{{ title }}</b>
-              </h2>
-            <form>
-              <input type="checkbox" id="only-finals" name="only-finals">
-              <label for="only-finals">Nur Final-Ergebnisse</label><br>
-            </form>
-          </div>
-        </div>
+  <div class="container">
+  {%- with messages = get_flashed_messages(with_categories=True) %}
+  {%- if messages %}
+    <div class="row">
+      <div class="col-md-12">
+        {{ utils.flashed_messages(messages) }}
+      </div>
+    </div>
+  {%- endif %}
+  {%- endwith %}
+<div class="jumbotron">
+      <h2>{{ title }}</h2>
         <div style="width:10%;">
           <button class="btn" onclick="printView()" style="border-radius: 12px;background: rgb(10, 87, 23); color: aliceblue;"><b>PDF Download</b></button>
         </div>
-      </div>
-
-      <div style="width: 100vw; max-width: 1000px; overflow: scroll;">
-        <table class="table">
+<br>
+        <table style="width: 70px">
+          {% for medal in medals %}
+            <tr>
+              <th><p style="text-align: right">{{ medals[medal] }} x </p></th>
+              <th style="width: 20%"><p style="padding-left: 50%">{{ medal|safe }}</p></th>
+            </tr>
+          {% endfor %}
+        </table>
+        <br>
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="filter-checkbox">
+            <label class="form-check-label" for="filter-checkbox">Nur Final-Ergebnisse</label>
+        </div>
+        <table id="results" class="table">
           <thead class="thead-dark">
             <tr>
-              <th scope="col"><a class="sort-by" onclick="sortResults('Name')">Name</a></th>
-              <th scope="col"><a class="sort-by" onclick="sortResults('Disziplin')">Disziplin</a></th>
-              <th scope="col"><a class="sort-by" onclick="sortResults('Altersklasse')">Altersklasse</a></th>
+              <th scope="col">Name</th>
+              <th scope="col">Disziplin</th>
+              <th scope="col">Altersklasse</th>
               <th scope="col"></th>
-              <th scope="col"><a class="sort-by" onclick="sortResults('Platzierung')">Platzierung</a></th>
+              <th scope="col">Platzierung</th>
               <th scope="col">Leistung</th>
-              <th scope="col"><a class="sort-by" onclick="sortResults('SB/PB')">SB/PB</a></th>
+              <th scope="col">SB/PB</th>
             </tr>
           </thead>
           <tbody id="table-body">
           {% for result in results %}
             <tr>
-              <td>{{ result["name"] }}</td>
+              <td>{{ result["name"] }}<p>{{ result.get("medal", "")|safe }}</p></td>
               <td>{{ result["event"] }}</td>
               <td>{{ result["agegroup"] }}</td>
               <td>{{ result["subtitle"] }}</td>
-              <td>{{ result["rank"] }}</td>
+              <td data-sort="{{ "9" * (len(result["rank"]) - 1) + result["rank"].replace(".", "") if result["rank"] else 99999 }}">{{ result["rank"] }}</td>
               <td>{{ result["result"] + (" ({})".format(result["wind"]) if result["wind"] else "") }}</td>
-              <td><b>{{ result["pborsb"] }}</b></td>
+              <td data-sort="{{ {"=SB": 1, "SB": 2, "=PB": 3, "PB": 4}.get(result["pborsb"], 0) }}">
+              {% if result["pborsb"] == "?" %}
+                <b><a href="{{ url_for("views.add_athlete", name=result["name"]) }}">{{ result["pborsb"] }}</a></b>
+              {% else %}
+                {% if result.get("tooltip") %}
+                <div class="mytooltip"><b>{{ result["pborsb"] }}</b>
+                  <span class="mytooltiptext">{{ result["tooltip"] }}</span>
+                </div>
+                {% else %}
+                  <b>{{ result["pborsb"] }}</b>
+                {% endif %}
+              {% endif %}
+              </td>
             </tr>
           {% endfor %}
           </tbody>
         </table>
       </div>
-
-    </div>
+  </div>
   {% endif %}
 
   <script>
-    let results = JSON.parse('{{ json_results | safe }}');
-    for (let i=0; i<results.length; i++) {
-        results[i].hide = false;
-    }
-    console.log(results);
+  let table;
+    $(document).ready( function () {
+      table = new DataTable('#results', {
+          paging: false,
+          info: false
+      });
+  } );</script>
 
-    function writeResultsToTable(results) {
-        const tableBody = document.getElementById("table-body");
-        let html = ""
-
-        for (let i=0; i<results.length; i++) {
-            if (results[i].hide)
-                continue;
-            html += "<tr>"
-            html += "<td>" + results[i].name + "</td>";
-            html += "<td>" + results[i].event + "</td>";
-            html += "<td>" + results[i].agegroup + "</td>";
-            html += "<td>" + results[i].subtitle + "</td>";
-            html += "<td>" + results[i].rank + "</td>";
-            if (results[i].wind) {
-                html += "<td>" + results[i].result + " (" + results[i].wind + ")</td>";
-            } else {
-                html += "<td>" + results[i].result + "</td>";
-            }
-            html += "<td><b>" + results[i].pborsb + "</b></td>";
-            html += "</tr>";
-        }
-        tableBody.innerHTML = html
-    }
-
-    function pbToNumber(s) {
-        if (s === "PB") {
-            return 5;
-        }
-        if (s === "=PB") {
-            return 4;
-        }
-        if (s === "SB") {
-            return 3;
-        }
-        if (s === "=SB") {
-            return 2;
-        }
-        if (s === "?") {
-            return 1;
-        }
-        return 0;
-    }
-
-    let reverse_name = 1;
-    let reverse_event = 1;
-    let reverse_agegroup = 1;
-    let reverse_rank = 1;
-    let reverse_pb = 1;
-    function sortResults(key) {
-        if (key === 'Name') {
-          results.sort((a, b) => reverse_name * a.familyname.localeCompare(b.familyname));
-          reverse_name *= -1;
-        }
-        if (key === 'Disziplin') {
-          results.sort((a, b) => reverse_event * a.event.localeCompare(b.event));
-          reverse_event *= -1;
-        }
-        if (key === 'Altersklasse') {
-          results.sort((a, b) => reverse_agegroup * a.agegroup.localeCompare(b.agegroup));
-          reverse_agegroup *= -1;
-        }
-        if (key === 'Platzierung') {
-          results.sort(function (a, b){
-            if (a.rank === b.rank)
-              return 0;
-            if (parseInt(a.rank) < parseInt(b.rank)) {
-              return reverse_rank * -1;
-            }
-            return reverse_rank;
-            });
-          reverse_rank *= -1;
-        }
-        if (key === 'SB/PB') {
-          results.sort(function(a, b){
-              let compareResult = -1;
-              if (a.pborsb === b.pborsb) {
-                  compareResult = 0;
-              }
-              if (pbToNumber(a.pborsb) < pbToNumber(b.pborsb)) {
-                  compareResult = 1;
-              }
-              return reverse_pb * compareResult;
-          });
-          reverse_pb *= -1;
-        }
-
-        writeResultsToTable(results);
-        console.log(results);
-
-    }
-    const checkboxFinals = document.getElementById('only-finals');
-    function hidePreEvents(event) {
-      if (event.currentTarget.checked) {
-        for (let i=0; i<results.length; i++) {
-            if (!((results[i].subtitle.includes("Rangfolge")) || (results[i].subtitle.includes("Final")))) {
-                results[i].hide = true;
-            }
-        }
-      } else {
-        for (let i=0; i<results.length; i++)
-          results[i].hide = false;
-      }
-      writeResultsToTable(results);
-    }
-    checkboxFinals.addEventListener('change', hidePreEvents)
-  </script>
   <script>
     function printView() {
       const url = window.location.href;
@@ -192,5 +109,24 @@
       split_url.splice(split_url.length - 1, 0, "print-view");
       location.replace(split_url.join("/"));
     }
+
+  const filterCheckbox = document.getElementById("filter-checkbox");
+  // Custom range filtering function
+  DataTable.ext.search.push(function (settings, data, dataIndex) {
+      if (!filterCheckbox.checked) {
+          return true
+      }
+      let round = data[3]
+      if (round.includes("Rangfolge") || round.includes("Final")) {
+          return true
+      }
+      return false
+  });
+  // Changes to the inputs will trigger a redraw to update the table
+  filterCheckbox.addEventListener('change', function () {
+      table.draw();
+  })
   </script>
+
+
 {% endblock %}

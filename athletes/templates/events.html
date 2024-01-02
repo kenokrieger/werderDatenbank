@@ -1,40 +1,111 @@
-{% extends 'base.html' %}
-{% block title %}Wettkämpfe{% endblock %}
-{% block content %}
+<!--
+Copyright (c) 2024 Keno Krieger
 
-<div class="container emp-profile shadow-lg" style="padding-top: 30px">
-  <div class="row">
-    <div class="col-md-6">
-        <div class="profile-head" style="float: left; width: 80%; clear: right;">
-          <h2>
-            <b>Wettkämpfe</b>
-          </h2>
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+{% extends "base.html" %}
+{% import "bootstrap/utils.html" as utils %}
+{% block title %}Wettkampfübersicht{% endblock %}
+{% block content %}
+  <div class="container">
+  {%- with messages = get_flashed_messages(with_categories=True) %}
+  {%- if messages %}
+    <div class="row">
+      <div class="col-md-12">
+        {{ utils.flashed_messages(messages) }}
       </div>
     </div>
-  </div>
+  {%- endif %}
+  {%- endwith %}
+    <div class="jumbotron">
+      <h1>Wettkämpfe</h1>
+       <form>
+          <div class="form-group">
+            <label for="year-select">Jahr</label>
+            <select class="form-select form-select-lg mb-3" id="year-select">
+              {% for y in range(2010, max_year + 1) %}
+              <option {{ "selected" if y == year else ""}}>{{ y }}</option>
+              {% endfor %}
+            </select>
+          </div>
+      </form>
+      <br>
+      <div class="loader" id="event-loader"></div>
+      <table id="events" class="table">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col">Datum</th>
+            <th scope="col">Ort</th>
+            <th scope="col">Name</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+   </div>
 
-  <div style="width: 100vw; max-width: 800px;">
-    <table class="table">
-      <thead class="thead-dark">
-        <tr>
-          <th scope="col">Datum</th>
-          <th scope="col">Ort</th>
-          <th scope="col">Name</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for event in events %}
-        <tr>
-          <td>{{ event["datumText"] }}</td>
-          <td>{{ event["ort"] }}</td>
-          <td>
-            <a href="{{ url_for('views.show_results', meeting_id = event['id']) }}">{{ event["name"] }}</a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-{% endblock %}
+  <script>
+    let eventsTable = new DataTable('#events', {
+      paging: true,
+      info: true,
+      pageLength: 25,
+      order: [[0, "desc"]],
+      columnDefs: [
+        {
+          "defaultContent": "",
+          "targets": '_all'
+        }, {
+          "targets": 0,
+          "render": DataTable.render.datetime('DD.MM.YYYY', 'DD.MM.YYYY', 'de')
+      }
+      ]
+    })
+    function get_events(year) {
+        let loader = document.getElementById("event-loader")
+        loader.style.visibility = "visible"
+        fetch(
+        "{{ url_for("events") }}?year=" + year,
+        {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+        }
+    )
+    .then((response) => response.json())
+    .then((content) => {
+        console.log(content)
+        if (content.status !== "failed") {
+            eventsTable.clear()
+            eventsTable.rows.add(content.value)
+            eventsTable.draw()
+        }
+        loader.style.visibility = "hidden"
+    })
+    }
+    let changeHandler = function() {
+      get_events(this.value)
+    }
+  get_events({{ year }})
+  const yearSelect = document.getElementById("year-select")
+    yearSelect.addEventListener("change", changeHandler, false)
+  </script>
+{%- endblock %}

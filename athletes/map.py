@@ -22,11 +22,11 @@ DISCIPLINE_MAPPER = {
     "1KO": "1KO",
     "3KO": "3KO",
     "10 km Straße": "10S",
-    "HALM": "HALM",
+    "Halbmarathon": "HALM",
     "3 x 1000 m": "3X1",
     "75 m": "75",
     "5 km Straße": "5S",
-    "MAR": "MAR",
+    "Marathon": "MAR",
     "30 m": "30",
     "7-M": "7-M",
     "3-M": "3-M",
@@ -51,7 +51,7 @@ DISCIPLINE_MAPPER = {
     "Zonenweitsprung": "WEZ",
     "4 x 400 m": "4X4",
     "15 km Straße": "15S",
-    "MEI": "MEI",
+    "Meile": "MEI",
     "800 m": "800",
     "Siebenkampf": "7-K",
     "Stabhochsprung": "STA",
@@ -59,27 +59,30 @@ DISCIPLINE_MAPPER = {
     "1.500 m": "1K5",
     "Fünfkampf": "5-K",
     "Zehnkampf": "10-K",
-    "SCH": "SCH",
+    "Schlagball": "SCH",
     "4 x 5000 m": "4X5",
-    "BLW": "BLW",
+    "Ballwurf": "BLW",
     "300 m": "300",
     "4 x 200 m": "4X2"
 }
+
+INVERSE_DISCIPLINE_MAPPER = {v: k for k, v in DISCIPLINE_MAPPER.items()}
 
 
 def map_discipline(disc):
     for discipline in DISCIPLINE_MAPPER:
         if discipline in disc:
             return DISCIPLINE_MAPPER[discipline]
-    print(f"No mapping found for '{disc}'")
     return disc
 
 
 def map_to_number(value):
+    if value is None:
+        value = ""
     expr = None
     cases = [
         "[0-9]*:[0-9][0-9],[0-9][0-9]",  # long distance
-        "[0-9]*,[0-9][0-9]",  # sprint or technical event
+        "[0-9]*,[0-9]*",  # sprint or technical event
         "[0-9].[0-9][0-9][0-9]"  # multi-event
     ]
     case_nr = -1
@@ -99,7 +102,7 @@ def map_to_number(value):
         return 3600 * hours + 60 * minutes + seconds
 
     if case_nr == 1:
-        return int(expr.replace(",", ""))
+        return float(expr.replace(",", "."))
 
     if case_nr == 2:
         return int(expr.replace(".", ""))

@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+{% block title %}Athleteninfo{% endblock %}
+{% block content %}
+
+<div class="container">
+  {%- with messages = get_flashed_messages(with_categories=True) %}
+  {%- if messages %}
+    <div class="row">
+      <div class="col-md-12">
+        {{ utils.flashed_messages(messages) }}
+      </div>
+    </div>
+  {%- endif %}
+  {%- endwith %}
+    <div class="jumbotron">
+      <h1>{{ athlete.name }}</h1>
+      <div>
+        <img src="https://camo.githubusercontent.com/c6fe2c13c27fe87ac6581b9fe289d2f071bd1b4ef6f3e3c5fc2aba0bbc23fd88/68747470733a2f2f75706c6f61642e77696b696d656469612e6f72672f77696b6970656469612f636f6d6d6f6e732f372f37632f50726f66696c655f6176617461725f706c616365686f6c6465725f6c617267652e706e67"
+             alt="profile-image-placeholder">
+      </div>
+      <div>
+        <h2>Letzte Leistungen</h2>
+        <table id="last-competitions" class="table">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col">Datum</th>
+            <th scope="col">Ort</th>
+            <th scope="col">Disziplin</th>
+            <th scope="col">Leistung</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+        </tbody>
+       </table>
+      </div>
+
+      <div>
+        <h2>Nächste Wettkämpfe</h2>
+        <table id="upcoming-competitions" class="table">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col">Datum</th>
+            <th scope="col">Name</th>
+            <th scope="col">Ort</th>
+            <th scope="col">Disziplin</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+        </tbody>
+       </table>
+      </div>
+
+      <div>
+        <h2>Häufigste Disziplinen</h2>
+        <table id="disciplines" class="table">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col">Disziplin</th>
+            <th scope="col">PB</th>
+            <th scope="col">PB-Info</th>
+            <th scope="col">SB</th>
+            <th scope="col">SB-Info</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+        </tbody>
+       </table>
+      </div>
+            <div>
+        <h2>Leistungen</h2>
+        <form>
+          <div class="form-group">
+            <label for="discipline-filter">Disziplin</label>
+            <input type="text" list="datalist-disciplines" class="form-control" id="discipline-filter" />
+            <datalist id="datalist-disciplines">
+            </datalist>
+          </div>
+          <div class="form-group">
+            <label for="year-filter">Jahr</label>
+            <input type="text" list="datalist-years" class="form-control" id="year-filter" />
+            <datalist id="datalist-years">
+            </datalist>
+          </div>
+      </form>
+      <br>
+        <table id="performances" class="table">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col">Datum</th>
+            <th scope="col">Ort</th>
+            <th scope="col">Disziplin</th>
+            <th scope="col">Leistung</th>
+          </tr>
+        </thead>
+        <tbody id="table-body">
+        </tbody>
+       </table>
+      </div>
+  </div>
+</div>
+  <script>
+  function writeUpcomingCompetitions(results) {
+        const table = document.getElementById("upcoming-competitions")
+        const tableBody = table.getElementsByTagName('tbody')[0];
+        let html = ""
+
+        for (let i=0; i < results.length; i++) {
+            html += "<tr>"
+            html += "<td " + 'data-sort="' + results[i].datumText.split(".").reverse().join("") + '">'
+            html += results[i].datumText + "</td>"
+            html += '<td><a href="' + results[i].url + '">' + results[i].name + '</a></td>'
+            html += "<td>" + results[i].sportstaette + "</td>"
+
+            let disciplines = ""
+            for (let j=0; j < results[i].wettbewerbe.length; j++) {
+                disciplines += results[i].wettbewerbe[j].disziplin
+                if (j !== results[i].wettbewerbe.length - 1)
+                    disciplines += ", "
+            }
+            html += "<td>" + disciplines + "</td>";
+        }
+        tableBody.innerHTML = html
+    }
+    function writeLastCompetitions(results) {
+        const table = document.getElementById("last-competitions")
+        const tableBody = table.getElementsByTagName('tbody')[0];
+        let html = ""
+
+        for (let i=0; i < results.length; i++) {
+            html += "<tr>"
+            html += "<td " + 'data-sort="' + results[i].date.split(".").reverse().join("") + '">'
+            html += results[i].date + "</td>"
+            html += "<td>" + results[i].city + "</td>";
+            html += "<td>" + results[i].discipline + "</td>"
+            if (results[i].wind) {
+                html += "<td>" + results[i].value + " (" + results[i].wind + ")</td>"
+            } else {
+                html += "<td>" + results[i].value + "</td>"
+            }
+        }
+        tableBody.innerHTML = html
+    }
+    function writeDisciplines(results) {
+        const table = document.getElementById("disciplines")
+        const tableBody = table.getElementsByTagName('tbody')[0];
+        let html = ""
+        let max_disciplines = 5
+        if (max_disciplines > results.length)
+            max_disciplines = results.length
+        for (let i=0; i < max_disciplines; i++) {
+            html += "<tr>"
+            html += "<td " + 'data-sort="' + results[i].count + '">' + results[i].discipline + "</td>";
+            if (results[i].pb) {
+                if (results[i].pb.wind) {
+                    html += "<td>" + results[i].pb.value
+                    html += " ("
+                    html += results[i].pb.wind > 0 ? "+" : ""
+                    html += results[i].pb.wind.toFixed(1) + ")</td>"
+                } else {
+                    html += "<td>" + results[i].pb.value + "</td>"
+                }
+                html += "<td>" + results[i].pb.city + ", den " + results[i].pb.date + "</td>";
+            } else {
+                html += "<td></td><td></td>"
+            }
+            if (results[i].sb) {
+                if (results[i].sb.wind)
+                  html += "<td>" + results[i].sb.value + " (" + results[i].sb.wind + ")</td>"
+                else
+                    html += "<td>" + results[i].sb.value + "</td>"
+                html += "<td>" + results[i].sb.city + ", den " + results[i].sb.date + "</td>";
+            } else {
+                html += "<td></td><td></td>"
+            }
+        }
+        tableBody.innerHTML = html
+    }
+
+  fetch("{{ url_for("athletedisciplines") }}?id={{ athlete.id }}",
+        {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+        }
+  )
+  .then((athlete_info) => athlete_info.json())
+  .then((json) => {
+      writeDisciplines(json)
+      new DataTable('#disciplines', {
+          paging: false,
+          info: false,
+          columnDefs: [{"defaultContent": "", "targets": '_all'}]
+      })
+  })
+  fetch("{{ url_for("athleteupcomingcompetitions") }}?id={{ athlete.id }}",
+        {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+        }
+  )
+  .then((athlete_info) => athlete_info.json())
+  .then((json) => {
+      writeUpcomingCompetitions(json)
+      new DataTable('#upcoming-competitions', {
+          paging: false,
+          info: false,
+          columnDefs: [{"defaultContent": "", "targets": '_all'}]
+      })
+  })
+  fetch("{{ url_for("athletelastcompetitions") }}?id={{ athlete.id }}",
+        {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+        }
+  )
+  .then((athlete_info) => athlete_info.json())
+  .then((json) => {
+      writeLastCompetitions(json)
+      new DataTable('#last-competitions', {
+          paging: false,
+          info: false,
+          columnDefs: [{"defaultContent": "", "targets": '_all'}]
+      })
+  })
+  </script>
+  <script>
+    let performanceTable = new DataTable('#performances', {
+      paging: true,
+      info: true,
+      order: [[0, "desc"]],
+      columnDefs: [
+        {
+          "defaultContent": "",
+          "targets": '_all'
+        }, {
+          "targets": 0,
+          "render": DataTable.render.datetime('DD.MM.YYYY', 'DD.MM.YYYY', 'de')
+      }
+      ]
+    })
+    const disciplineFilter = document.getElementById("discipline-filter");
+    const yearFilter = document.getElementById("year-filter");
+    // Custom range filtering function
+    DataTable.ext.search.push(function (settings, data, dataIndex) {
+        if ( settings.nTable.id !== 'performances' ) {
+            return true;
+        }
+        let year_comp = yearFilter.value.trim()
+        let comp_discipline = disciplineFilter.value.trim()
+        let date = data[0]
+        let discipline = data[2]
+
+        if (
+            ((year_comp.length === 0) && (comp_discipline.length === 0)) ||
+            ((year_comp.length === 0) && (discipline == comp_discipline)) ||
+            ((date.includes(year_comp)) && (comp_discipline.length === 0)) ||
+            ((date.includes(year_comp)) && (discipline == comp_discipline))
+        ) {
+            return true
+        }
+        return false
+    })
+    // Changes to the inputs will trigger a redraw to update the table
+    disciplineFilter.addEventListener('input', function () {
+        performanceTable.draw();
+    })
+    yearFilter.addEventListener('input', function () {
+        performanceTable.draw();
+    })
+
+    fetch(
+        "{{ url_for("athleteperformances") }}?id={{ athlete.id }}",
+        {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+        }
+    )
+    .then((response) => response.json())
+    .then((content) => {
+        console.log(content)
+        const disciplineDatalist = document.getElementById("datalist-disciplines")
+        const yearDatalist = document.getElementById("datalist-years")
+
+        let disciplineOptions = content["discipline_options"]
+        let yearOptions = content["year_options"]
+
+        for (let i = 0; i < disciplineOptions.length; i++) {
+            disciplineDatalist.innerHTML += "<option>" + disciplineOptions[i] + "</option>"
+        }
+        for (let i = 0; i < yearOptions.length; i++) {
+            yearDatalist.innerHTML += "<option>" + yearOptions[i] + "</option>"
+        }
+        performanceTable.clear()
+        performanceTable.rows.add(content.table_data)
+        performanceTable.draw()
+    })
+  </script>
+{% endblock %}

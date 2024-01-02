@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
+from collections import namedtuple
+from athletes.scraping import ladv
 
 from athletes import db
-from athletes.map import map_to_number, get_season_start
+from athletes.map import map_to_number, get_season_start, INVERSE_DISCIPLINE_MAPPER
 
 
 class Athlete(db.Model):
@@ -15,22 +17,23 @@ class Athlete(db.Model):
     def get_personal_best(self, discipline, date=None):
         if date is None:
             date = datetime.today()
-        if type(date) == str:
+        if type(date) is str:
             date = datetime.strptime(date, "%d.%m.%Y")
         performances = Performance.query.filter_by(
             athlete_id=self.id, discipline=discipline)
         performances = [p for p in performances if datetime.strptime(
             p.date, "%d.%m.%Y") <= date]
-        for pb in sorted([p.value for p in performances], key=map_to_number,
+        for pb in sorted(performances, key=lambda x: map_to_number(x.value),
                          reverse=ASCENDING.get(discipline, False)):
-            if map_to_number(pb) > 0:
+            if map_to_number(pb.value) > 0:
                 return pb
-        return ""
+        performance = namedtuple("Performance", ["value"])
+        return performance(value=None)
 
     def get_seasons_best(self, discipline, date=None):
         if date is None:
             date = datetime.today()
-        if type(date) == str:
+        if type(date) is str:
             date = datetime.strptime(date, "%d.%m.%Y")
         season_start = get_season_start(date)
         performances = Performance.query.filter_by(
@@ -39,12 +42,13 @@ class Athlete(db.Model):
         for p in performances:
             pdate = datetime.strptime(p.date, "%d.%m.%Y")
             if season_start <= pdate <= date:
-                season_performances.append(p.value)
-        for sb in sorted(season_performances, key=map_to_number,
+                season_performances.append(p)
+        for sb in sorted(season_performances, key=lambda x: map_to_number(x.value),
                          reverse=ASCENDING.get(discipline, False)):
-            if map_to_number(sb) > 0:
+            if map_to_number(sb.value) > 0:
                 return sb
-        return ""
+        performance = namedtuple("Performance", ["value"])
+        return performance(value=None)
 
     def is_personal_best(self, discipline, value, date=None):
         return value == self.get_personal_best(discipline, date)
@@ -55,48 +59,155 @@ class Athlete(db.Model):
     def is_record(self, discipline, value, date=None):
         if date is None:
             date = datetime.today()
-        if type(date) == str:
+        if type(date) is str:
             date = datetime.strptime(date, "%d.%m.%Y")
         date -= timedelta(days=1)
         previous_pb = self.get_personal_best(discipline, date)
         previous_sb = self.get_seasons_best(discipline, date)
 
-        pb_rating = map_to_number(previous_pb)
-        sb_rating = map_to_number(previous_sb)
+        pb_rating = map_to_number(previous_pb.value)
+        sb_rating = map_to_number(previous_sb.value)
         performance_rating = map_to_number(value)
 
         if performance_rating < 0:
-            return ""
+            return "", None
 
-        if not previous_pb:
-            return "PB"
+        if not previous_pb.value:
+            return "PB", None
 
         ascending = ASCENDING.get(discipline, False)
 
         if ascending:
             if performance_rating > pb_rating:
-                return "PB"
-            if value == previous_pb:
-                return "=PB"
-            if not previous_sb:
-                return "SB"
+                return "PB", previous_pb
+            if value == previous_pb.value:
+                return "=PB", previous_pb
+            if not previous_sb.value:
+                return "SB", None
             if performance_rating > sb_rating:
-                return "SB"
-            if value == previous_sb:
-                return "=SB"
+                return "SB", previous_sb
+            if value == previous_sb.value:
+                return "=SB", previous_sb
         else:
             if performance_rating < pb_rating:
-                return "PB"
-            if value == previous_pb:
-                return "=PB"
-            if not previous_sb:
-                return "SB"
+                return "PB", previous_pb
+            if value == previous_pb.value:
+                return "=PB", previous_pb
+            if not previous_sb.value:
+                return "SB", None
             if performance_rating < sb_rating:
-                return "SB"
-            if value == previous_sb:
-                return "=SB"
+                return "SB", previous_sb
+            if value == previous_sb.value:
+                return "=SB", previous_sb
 
-        return ""
+        return "", None
+
+    def get_disciplines(self):
+        performances = Performance.query.filter_by(athlete_id=self.id).all()
+        disciplines = [p.discipline for p in performances]
+
+        common_disciplines = []
+        for discipline in set(disciplines):
+            entry = {"discipline": discipline, "pb": None, "sb": None,
+                     "count": disciplines.count(discipline)}
+            pb = self.get_personal_best(discipline)
+            sb = self.get_seasons_best(discipline)
+            if pb.value is not None:
+                entry["pb"] = pb.to_dict()
+            if sb.value is not None:
+                entry["sb"] = sb.to_dict()
+            common_disciplines.append(entry)
+
+        common_disciplines.sort(key=lambda x: -x["count"])
+
+        for discipline in common_disciplines:
+            discipline["discipline"] = INVERSE_DISCIPLINE_MAPPER.get(
+                discipline["discipline"], discipline["discipline"])
+
+        return common_disciplines
+
+    def get_upcoming_competitions(self):
+        if self.ladv_id is None:
+            try:
+                self.ladv_id = ladv.get_ladv_id(self.name)
+                db.session.commit()
+            except:
+                pass
+        upcoming_competitions = ladv.get_upcoming_competitions(self.ladv_id)
+
+        for competition in upcoming_competitions:
+            for discipline in competition["wettbewerbe"]:
+                discipline["disziplin"] = INVERSE_DISCIPLINE_MAPPER.get(
+                    discipline["disziplin"], discipline["disziplin"])
+
+        return upcoming_competitions
+
+    def get_last_competitions(self):
+        performances = Performance.query.filter_by(athlete_id=self.id).all()
+        dates = sorted(
+            list(set([p.date for p in performances])),
+            key=lambda x: datetime.strptime(x, "%d.%m.%Y").timestamp()
+        )
+        date_threshold = dates[-min(3, len(dates))]
+        datetime_threshold = datetime.strptime(date_threshold, "%d.%m.%Y")
+        last_competitions = [
+            p.to_dict() for p in performances
+            if datetime.strptime(p.date, "%d.%m.%Y") >= datetime_threshold
+        ]
+        last_competitions.sort(
+            key=lambda x: datetime.strptime(x["date"], "%d.%m.%Y").timestamp()
+        )
+        for competition in last_competitions:
+            competition["discipline"] = INVERSE_DISCIPLINE_MAPPER.get(
+                competition["discipline"], competition["discipline"])
+        last_competitions.reverse()
+
+        for competition in last_competitions:
+            wind = competition["wind"]
+            if competition["wind"] is None:
+                continue
+            wind_fmt = ("+" if wind > 0 else "") + f"{wind:.1f}"
+            competition["wind"] = wind_fmt
+        return last_competitions
+
+    def get_athlete_info(self):
+        return {
+            "upcoming_competitions": self.get_upcoming_competitions(),
+            "last_competitions": self.get_last_competitions(),
+            "disciplines": self.get_disciplines()
+        }
+
+    def add_performances(self, performances):
+        for p in performances:
+            existing_performance = Performance.query.filter_by(date=p["datum"],
+                                                               city=p["ort"],
+                                                               athlete_id=self.id,
+                                                               value=p["leistung"],
+                                                               discipline=p[
+                                                                   "disziplin"]
+                                                               )
+            if existing_performance.first() is not None:
+                continue
+
+            wind = p.get("wind")
+            if wind:
+                wind = float(wind.replace(",", "."))
+
+            new_performance = Performance(
+                date=p["datum"],
+                city=p["ort"],
+                athlete_id=self.id,
+                discipline=p["disziplin"],
+                value=p["leistung"],
+                unit=None,
+                wind=wind,
+                placement=None,
+                championship=None,
+                indoor=True if p["halle"] == "true" else False
+            )
+            db.session.add(new_performance)
+        db.session.commit()
+        return None
 
 
 class Performance(db.Model):
@@ -111,6 +222,33 @@ class Performance(db.Model):
     placement = db.Column(db.Integer)
     championship = db.Column(db.String(150))
     indoor = db.Column(db.Boolean)
+
+    def update(self, data):
+        self.date = data.get("date", self.date)
+        self.city = data.get("city", self.city)
+        self.athlete_id = data.get("athlete_id", self.athlete_id)
+        self.discipline = data.get("discipline", self.discipline)
+        self.value = data.get("value", self.value)
+        self.unit = data.get("unit", self.unit)
+        self.wind = data.get("wind", self.wind)
+        self.placement = data.get("placement", self.placement)
+        self.championship = data.get("championship", self.championship)
+        self.indoor = data.get("indoor", self.indoor)
+        db.session.commit()
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "date": self.date,
+            "city": self.city,
+            "athlete_id": self.athlete_id,
+            "discipline": self.discipline,
+            "value": self.value,
+            "unit": self.unit,
+            "wind": self.wind,
+            "placement": self.placement,
+            "indoor": self.indoor
+        }
 
 
 ASCENDING = {

@@ -1,0 +1,134 @@
+<!--
+Copyright (c) 2024 Keno Krieger
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+{% extends "base.html" %}
+{% import "bootstrap/utils.html" as utils %}
+{% block title %}Bestenlisten{% endblock %}
+{% block content %}
+  <div class="container">
+  {%- with messages = get_flashed_messages(with_categories=True) %}
+  {%- if messages %}
+    <div class="row">
+      <div class="col-md-12">
+        {{ utils.flashed_messages(messages) }}
+      </div>
+    </div>
+  {%- endif %}
+  {%- endwith %}
+    <div class="jumbotron">
+      <h1>Bestenlisten</h1>
+      <form>
+        <div class="form-group">
+            <label for="age">Altersklasse</label>
+            <input type="text" list="groups" class="form-control" id="age" />
+            <datalist id="groups">
+              <option>Männer</option>
+              <option>MU23</option>
+              <option>MJU20</option>
+              <option>MJU18</option>
+              <option>MJU16</option>
+              <option>Frauen</option>
+              <option>WU23</option>
+              <option>WJU20</option>
+              <option>WJU18</option>
+              <option>WJU16</option>
+            </datalist>
+          </div>
+        <div class="form-group">
+          <label for="disc">Disziplin</label>
+          <input type="text" list="disciplines" class="form-control" id="disc" />
+          <datalist id="disciplines">
+           {% for discipline in disciplines %}
+              <option>{{ discipline }}</option>
+            {% endfor %}
+          </datalist>
+        </div>
+        <div class="form-group">
+          <label for="year">Jahr</label>
+          <input type="text" list="years" class="form-control" id="year" />
+          <datalist id="years">
+            {% for year in years %}
+              <option>{{ year }}</option>
+            {% endfor %}
+          </datalist>
+        </div>
+      <div class="form-group">
+            <label for="where">Halle/Freiluft</label>
+            <input type="text" list="locations" class="form-control" id="where" />
+            <datalist id="locations">
+              <option>Halle</option>
+              <option>Freiluft</option>
+              <option>Halle + Freiluft</option>
+            </datalist>
+          </div>
+        <button class="btn btn-secondary" type="button" onclick="update_ranking()">Anzeigen</button>
+      </form>
+      <br>
+      <table id="rankings" class="table">
+        <thead class="thead-dark">
+          <tr>
+            <th scope="col">Platz</th>
+            <th scope="col">Name</th>
+            <th scope="col">Altersklasse</th>
+            <th scope="col">Leistung</th>
+            <th scope="col">Info</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+   </div>
+
+  <script>
+    let rankingTable;
+    $(document).ready(
+          function () {
+              rankingTable = new DataTable('#rankings', {
+                      paging: true,
+                      info: true
+                  }
+              )
+          }
+    )
+    function update_ranking() {
+        let disc = document.getElementById("disc").value.trim()
+        let year = document.getElementById("year").value.trim()
+        let agegroup = document.getElementById("age").value.trim()
+        let where = document.getElementById("where").value.trim()
+        fetch("{{ url_for("rankings") }}?disc=" + disc + "&year=" + year + "&age=" + agegroup + "&where=" + where,
+            {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+              }
+            }
+      )
+      .then((response) => response.json())
+      .then((content) => {
+          rankingTable.clear()
+          rankingTable.rows.add(content)
+          rankingTable.draw()
+      })
+    }
+   </script>
+{%- endblock %}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
+      crossorigin="anonymous"
+    />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+      crossorigin="anonymous"
+    />
+
+
+    <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+
+<!-- Add icon library -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+<!------ Include the above in your HEAD tag ---------->
+
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='index.css') }}" />
+     <title>{{ title }}</title>
+</head>
+<body style="background-color: white;">
+<div>
+    <h1>
+      <b>{{ title }}</b>
+    </h1>
+
+    <table class="table">
+      <tbody>
+      {% for agegroup in results %}
+        <tr class="spacer" style="border: none;">
+          <td colspan="5">
+            <h2>
+              <b>{{ agegroup }}</b><br>
+            </h2>
+          </td>
+        </tr>
+      {% for discipline in results[agegroup] %}
+        <tr class="spacer" style="border: none;">
+          <td colspan="5">
+            <h3>
+              <b>{{ discipline }}</b><br>
+            </h3>
+          </td>
+        </tr>
+        <tr class="thead-dark">
+          <th>Name</th>
+          <th></th>
+          <th>Platzierung</th>
+          <th>Leistung</th>
+          <th>SB/PB</th>
+        </tr>
+      {% for r in results[agegroup][discipline] %}
+        <tr>
+          <td>{{ r["name"] }}</td>
+          <td>{{ r["subtitle"] }}</td>
+          <td>{{ r["rank"] }}</td>
+          <td>{{ r["result"] + (" ({})".format(r["wind"]) if r["wind"] else "") }}</td>
+          <td><b>{{ r["pborsb"] }}</b></td>
+        </tr>
+      {% endfor %}
+      {% endfor %}
+      {% endfor %}
+      </tbody>
+    </table>
+</div>
+
+
+
+
+<br><br><br>
+<!--Footer-->
+<div class="mt-5 p-5 bg-dark text-white text-center">
+    <h5>Datenbank</h5>
+    <p class="text-secondary">© 2023 Keno Krieger</p>
+    <p class="text-secondary">© powered by <a href="https://ladv.de">ladv</a></p>
+</div>
+<!--end of Footer-->
+
+<!--scripts-->
+<script
+      src="https://code.jquery.com/jquery-3.2.1.slim.min.js"
+      integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+      integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+      integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+      crossorigin="anonymous"
+    ></script>
+<!--end of scripts-->
+
+</body>
+</html>

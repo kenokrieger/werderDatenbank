@@ -2,14 +2,15 @@ import json
 import os
 from hmac import compare_digest
 from flask import Blueprint, render_template, request, url_for, redirect, \
-    send_from_directory, current_app
+    send_from_directory, current_app, abort
 from flask_restful import Resource
 from flask_nav import Nav
 from flask_nav.elements import Navbar, View
 from datetime import datetime
 
 from athletes import db
-from athletes.models.models import Athlete, Performance, ASCENDING
+from athletes.models.models import Athlete, Performance, ASCENDING, \
+    QualificationNorm
 from athletes.scraping.ladv import find_results, get_werder_results, \
     get_werder_events, get_athlete_info, get_ladv_id
 from athletes.map import map_discipline, DISCIPLINE_MAPPER, map_to_number, INVERSE_DISCIPLINE_MAPPER
@@ -135,12 +136,13 @@ def print_results(meeting_id):
 def _update_database(city, results, championship=None):
     medals = {"1": r"&#129351;", "2": r"&#129352;", "3": r"&#129353;"}
     for result in results:
+        result["athlete_id"] = None
         athlete = Athlete.query.filter_by(name=result["name"]).first()
         if athlete is None:
             result["pborsb"] = "?"
             result["tooltip"] = "Athlet nicht in der Datenbank"
             continue
-
+        result["athlete_id"] = athlete.id
         result["pborsb"] = ""
         date = result["date"]
         value = result["result"]
@@ -197,7 +199,6 @@ def clear_result_cache(meeting_id):
         cached_file = cached_file_base + ext
         if os.path.exists(cached_file):
             os.remove(cached_file)
-    cached_file = "athletes/cache/{}.html".format(meeting_id)
 
     return redirect(url_for('views.get_results'))
 
@@ -256,6 +257,8 @@ def add_athlete(name):
 @views.route("/athletes/<athlete_id>")
 def athlete_profile(athlete_id):
     athlete = Athlete.query.get(athlete_id)
+    if athlete is None:
+        return abort(404)
     return render_template("profile.html", athlete=athlete)
 
 
@@ -353,10 +356,10 @@ class AddDatabaseEntry(Resource):
 
         athlete = Athlete.query.filter_by(name=payload["athlete"]).first()
         if not athlete:
-            return {"status": "failed", "value": "Athlete does not exists"}
+            return {"status": "failed", "value": "Athlete does not exist"}
         payload["athlete_id"] = athlete.id
 
-        if payload["discipline"] not in DISCIPLINE_MAPPER or not DISCIPLINE_MAPPER.get(payload["discipline"]):
+        if payload["discipline"] not in DISCIPLINE_MAPPER.items() and not DISCIPLINE_MAPPER.get(payload["discipline"]):
             return {"status": "failed", "value": "Discipline not recognized"}
         payload["discipline"] = DISCIPLINE_MAPPER.get(payload["discipline"], payload["discipline"])
 
@@ -426,6 +429,67 @@ class AddDatabaseEntry(Resource):
         return {"status": "success", "value": performance.to_dict()}
 
 
+class AddQualificationNorm(Resource):
+    """
+    API Endpoint for getting data from a sensor.
+    """
+
+    def post(self):
+        """POST method of the API"""
+        token = request.args.get("token")
+        if not compare_digest(token, "lebenslanggruenweiss"):
+            return {"status": "failed", "value": "forbidden"}
+
+        overwrite = request.args.get("overwrite", False)
+        required_keys = ["title", "agegroup", "gender", "discipline", "value",
+                         "indoor"]
+
+        payload = request.json
+        if not all([k in payload for k in required_keys]):
+            return {"status": "failed", "value": "Missing required values"}
+
+        if payload["discipline"] not in DISCIPLINE_MAPPER.items() and not DISCIPLINE_MAPPER.get(payload["discipline"]):
+            return {"status": "failed", "value": "Discipline not recognized"}
+        payload["discipline"] = DISCIPLINE_MAPPER.get(payload["discipline"], payload["discipline"])
+
+        if map_to_number(payload["value"]) < 0:
+            reason = "Value format not recognized. Expected formats: long distance: {}, sprint or technical event: {}, multievent: {}".format(
+                "[0-9]*:[0-9][0-9],[0-9][0-9]",  # long distance
+                "[0-9]*,[0-9]*",  # sprint or technical event
+                "[0-9].[0-9][0-9][0-9]"  # multi-event"
+            )
+            return {"status": "failed", "value": reason}
+
+        if payload["indoor"] not in ("true", "false"):
+            return {"status": "failed", "value": "Indoor needs to be 'true' or 'false'"}
+        payload["indoor"] = True if payload["indoor"] == "true" else False
+
+        existing_norms = QualificationNorm.query.filter_by(
+            agegroup=payload["agegroup"],
+            gender=payload["gender"],
+            discipline=payload["discipline"],
+            value=payload["value"],
+            indoor=payload["indoor"]
+        ).all()
+        if not existing_norms:
+            norm_info = {
+                k: payload[k] for k in ("title", "agegroup", "gender",
+                                        "discipline", "value", "indoor")
+            }
+            new_norm = QualificationNorm(**norm_info)
+            db.session.add(new_norm)
+            db.session.commit()
+            return {"status": "success", "value": new_norm.to_dict()}
+
+        if not overwrite:
+            return {"status": "pending", "value": [n.to_dict() for n in existing_norms]}
+
+        payload["id"] = int(payload["id"])
+        qualification_norm = QualificationNorm.query.get(payload["id"])
+        qualification_norm.update(payload)
+        return {"status": "success", "value": qualification_norm.to_dict()}
+
+
 class Rankings(Resource):
     """
     API Endpoint for getting data from a sensor.
@@ -462,8 +526,7 @@ class Rankings(Resource):
         query = Performance.query.filter_by(discipline=query_disc).filter(
             ~Performance.value.contains("a"),
             ~Performance.value.contains("d"),
-            ~Performance.value.contains("o"),
-
+            ~Performance.value.contains("o")
         )
         if year != "Ewige":
             query = query.filter(Performance.date.contains(year))
@@ -569,8 +632,10 @@ class Events(Resource):
                 cache = json.load(f)
         else:
             cache = None
-        if int(year) != datetime.now().year or not cache:
+        if int(year) == datetime.now().year or not cache:
             new_events = get_werder_results(year, cache=cache)
+        else:
+            new_events = cache
 
         fmt_events = [
             [
@@ -604,3 +669,4 @@ def add_resources(api):
     api.add_resource(AthleteDisciplines, "/api/athlete-disciplines")
     api.add_resource(AthleteUpcomingCompetitions, "/api/athlete-upcoming-competitions")
     api.add_resource(AthleteLastCompetitions, "/api/athlete-last-competitions")
+    api.add_resource(AddQualificationNorm, "/api/add-qualification-norm")

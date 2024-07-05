@@ -111,13 +111,26 @@ def map_to_number(value):
 
 
 def get_season_start(date):
-    if 3 < date.month < 11:
-        # summer season
-        return datetime(date.year, 3, 31)
-
     if date.month <= 3:
         # winter season that began last year
         return datetime(date.year - 1, 11, 1)
 
+    if 3 < date.month < 11:
+        # summer season
+        return datetime(date.year, 3, 31)
+
     # winter season this year
     return datetime(date.year, 11, 1)
+
+
+def get_season_end(date):
+    if date.month <= 3:
+        # winter season that began last year
+        return datetime(date.year, 3, 31)
+
+    if 3 < date.month < 11:
+        # summer season
+        return datetime(date.year, 10, 31)
+
+    # winter season this year
+    return datetime(date.year + 1, 3, 31)

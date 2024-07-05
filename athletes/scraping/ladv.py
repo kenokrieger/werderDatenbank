@@ -211,8 +211,9 @@ def get_athlete_info(athlete_id, start_year, end_year=datetime.now().year):
         previous_performances = response.get("leistungen", [])
         new_performances = content[0]["leistungen"]
         response.update(content[0])
+        response["leistungen"] = previous_performances
         if content[0].get("vereinnumber") == CLUB_NUMBER:
-            response["leistungen"] = previous_performances + new_performances
+            response["leistungen"] += new_performances
     return response
 
 

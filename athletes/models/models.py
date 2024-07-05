@@ -21,8 +21,12 @@ class Athlete(db.Model):
             date = datetime.strptime(date, "%d.%m.%Y")
         performances = Performance.query.filter_by(
             athlete_id=self.id, discipline=discipline)
-        performances = [p for p in performances if datetime.strptime(
-            p.date, "%d.%m.%Y") <= date]
+        start_date = _get_valid_pb_start_date(discipline, date,
+                                              self.year_of_birth, self.gender)
+        performances = [
+            p for p in performances
+            if start_date <= datetime.strptime(p.date, "%d.%m.%Y") <= date
+        ]
         for pb in sorted(performances, key=lambda x: map_to_number(x.value),
                          reverse=ASCENDING.get(discipline, False)):
             if map_to_number(pb.value) > 0:
@@ -51,10 +55,10 @@ class Athlete(db.Model):
         return performance(value=None)
 
     def is_personal_best(self, discipline, value, date=None):
-        return value == self.get_personal_best(discipline, date)
+        return value == self.get_personal_best(discipline, date).value
 
     def is_seasons_best(self, discipline, value, date=None):
-        return value == self.get_seasons_best(discipline, date)
+        return value == self.get_seasons_best(discipline, date).value
 
     def is_record(self, discipline, value, date=None):
         if date is None:
@@ -182,9 +186,7 @@ class Athlete(db.Model):
             existing_performance = Performance.query.filter_by(date=p["datum"],
                                                                city=p["ort"],
                                                                athlete_id=self.id,
-                                                               value=p["leistung"],
-                                                               discipline=p[
-                                                                   "disziplin"]
+                                                               value=p["leistung"]
                                                                )
             if existing_performance.first() is not None:
                 continue
@@ -247,6 +249,91 @@ class Performance(db.Model):
             "unit": self.unit,
             "wind": self.wind,
             "placement": self.placement,
+            "indoor": self.indoor
+        }
+
+
+def _get_valid_pb_start_date(discipline, date, year_of_birth, gender):
+    #  60 m Hurdles (60H): WU14, WU16, WU18, WU20 + W, MU14, MU16, MU18, MU20, M
+    # 100 m Hurdles (100H): WU18, WU20 + W
+    # 110 m Hurdles (110H): MU18, MU20, M
+    # Shot Put      (KUG): WU14-U18, WU20, W, MU14, MU16, MU18, MU20, M
+    # Javelin       (SPE): WU14, WU16-U18, WU20 + W, MU14, MU16, MU18, MU20 + M
+    # Discus        (DIS): WU14, WU16-W, MU14, MU16, MU18, MU20, M
+    # Hammer
+    # This function is not readable but makes sense
+    changing_events = ["60H", "100H", "110H", "KUG", "SPE", "DIS"]
+    if discipline not in changing_events:
+        return datetime(1900, 1, 1)
+
+    infinity = datetime(1900, 1, 1)
+    athlete_age = date.year - year_of_birth
+    if athlete_age < 14:
+        return infinity
+
+    if discipline == "60H":
+        if gender == "W" and athlete_age > 19:
+            return datetime(date.year - (athlete_age - 18), 1, 1)
+        if athlete_age > 19:
+            return datetime(date.year - (athlete_age - 20), 1, 1)
+
+    elif discipline == "100H":
+        if gender == "M" or athlete_age < 18:
+            return infinity
+        if athlete_age > 19:
+            return datetime(date.year - (athlete_age - 18), 1, 1)
+
+    elif discipline == "110H":
+        if athlete_age > 19:
+            return datetime(date.year - (athlete_age - 20), 1, 1)
+
+    elif discipline == "KUG":
+        if gender == "W" and athlete_age < 18:
+            return infinity
+        if athlete_age > 19:
+            return datetime(date.year - (athlete_age - 20), 1, 1)
+
+    elif discipline == "SPE":
+        if gender == "W" and athlete_age < 18:
+            return datetime(date.year - (athlete_age - 14), 1, 1)
+        if athlete_age > 19:
+            return datetime(date.year - (athlete_age - 18), 1, 1)
+
+    elif discipline == "DIS":
+        if gender == "W":
+            return datetime(date.year - (athlete_age - 14), 1, 1)
+        if gender == "M" and athlete_age > 19:
+            return datetime(date.year - (athlete_age - 20), 1, 1)
+
+    return datetime(date.year - (athlete_age % 2), 1, 1)
+
+
+class QualificationNorm(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150))
+    agegroup = db.Column(db.String(150))
+    gender = db.Column(db.String(150))
+    discipline = db.Column(db.String(150))
+    value = db.Column(db.String(150))
+    indoor = db.Column(db.Boolean)
+
+    def update(self, data):
+        self.title = data.get("title", self.title)
+        self.agegroup = data.get("agegroup", self.agegroup)
+        self.gender = data.get("gender", self.gender)
+        self.discipline = data.get("discipline", self.discipline)
+        self.value = data.get("value", self.value)
+        self.indoor = data.get("indoor", self.indoor)
+        db.session.commit()
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "agegroup": self.agegroup,
+            "gender": self.gender,
+            "discipline": self.discipline,
+            "value": self.value,
             "indoor": self.indoor
         }
 

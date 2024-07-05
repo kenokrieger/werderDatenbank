@@ -66,7 +66,14 @@
           <tbody id="table-body">
           {% for result in results %}
             <tr>
-              <td>{{ result["name"] }}<p>{{ result.get("medal", "")|safe }}</p></td>
+              <td>
+                {% if result["athlete_id"] is not none %}
+                 <a href="{{ url_for("views.athlete_profile", athlete_id=result["athlete_id"]) }}">{{ result["name"] }}</a>
+                {% else %}
+                  {{ result["name"] }}
+                {% endif %}
+                <p>{{ result.get("medal", "")|safe }}</p>
+              </td>
               <td>{{ result["event"] }}</td>
               <td>{{ result["agegroup"] }}</td>
               <td>{{ result["subtitle"] }}</td>

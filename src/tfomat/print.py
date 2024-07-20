@@ -1,9 +1,11 @@
 from pylatex import Document, Section, MultiColumn, NewLine, \
-    MediumText, LargeText, LongTabu, NoEscape, Package
+    MediumText, LargeText, LongTabu, NoEscape, Package, LongTable
 from pylatex.utils import bold
 
 
 def make_pdf(data, title, subtitle, name="main"):
+
+
     geometry_options = {
         "tmargin": "15mm", "lmargin": "20mm", "rmargin": "20mm",
         "bmargin": "20mm"
@@ -11,6 +13,11 @@ def make_pdf(data, title, subtitle, name="main"):
     doc = Document(geometry_options=geometry_options, page_numbers=False)
     doc.change_length("\\tabulinesep", "4pt")
     doc.packages.append(Package("xcolor"))
+    # remove dependency of Package("longtable") from LongTabu
+    # and add longtable[_v4.13] to the preambel for compatibility
+    # purposes
+    LongTabu.packages = [Package("tabu")]
+    doc.preamble.append(NoEscape(r'\usepackage{longtable}[=v4.13]'))
     with doc.create(Section(title, numbering=False)):
         doc.append(MediumText(bold(subtitle)))
         doc.append(NewLine())
@@ -50,8 +57,8 @@ def make_pdf(data, title, subtitle, name="main"):
                     data_table.add_empty_row()
                 data_table.add_empty_row()
                 data_table.add_empty_row()
-    doc.generate_pdf(name, clean_tex=False)
+    doc.generate_pdf(name, clean_tex=True)
 
 
 if __name__ == '__main__':
-    make_pdf()
+    make_pdf([], "", "")

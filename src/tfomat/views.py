@@ -60,7 +60,8 @@ def performance_overview():
 
 @views.route("/results/<int:meeting_id>")
 def show_results(meeting_id):
-    cached_file = "athletes/cache/{}.html".format(meeting_id)
+    cache_path = os.path.join(current_app.root_path, "cache")
+    cached_file = os.path.join(cache_path, "{}.html".format(meeting_id))
 
     if os.path.exists(cached_file):
         with open(cached_file, "r", encoding="utf-8") as f:
@@ -104,10 +105,10 @@ def _sort_by_result(value):
 
 @views.route("/results/print-view/<int:meeting_id>")
 def print_results(meeting_id):
-    cached_file = "athletes/cache/{}.pdf".format(meeting_id)
-    wdir = os.path.join(current_app.root_path, "cache/")
+    cache_path = os.path.join(current_app.root_path, "cache")
+    cached_file = os.path.join(cache_path, "{}.pdf".format(meeting_id))
     if os.path.exists(cached_file):
-        return send_from_directory(directory=wdir,
+        return send_from_directory(directory="./cache",
                                    path=f"./{meeting_id}.pdf")
 
     meeting_info, results = find_results(meeting_id)
@@ -129,9 +130,9 @@ def print_results(meeting_id):
                 matches.reverse()
             matches = _move_nans_to_bottom(matches)
             print_view[agegroup][d] = matches
-    make_pdf(print_view, title, subtitle, name=f"athletes/cache/{meeting_id}")
-    return send_from_directory(directory=wdir,
-                               path=f"./{meeting_id}.pdf")
+    make_pdf(print_view, title, subtitle,
+             name=os.path.join(cache_path, f"{meeting_id}"))
+    return send_from_directory(directory="./cache", path=f"./{meeting_id}.pdf")
 
 
 def _update_database(city, results, championship=None):
@@ -195,7 +196,8 @@ def _update_database(city, results, championship=None):
 
 @views.route("/clear-results/<int:meeting_id>")
 def clear_result_cache(meeting_id):
-    cached_file_base = f"athletes/cache/{meeting_id}"
+    cache_path = os.path.join(current_app.root_path, "cache")
+    cached_file_base = os.path.join(cache_path, f"{meeting_id}")
     for ext in (".html", ".pdf", ".tex"):
         cached_file = cached_file_base + ext
         if os.path.exists(cached_file):
@@ -623,18 +625,20 @@ class AthletePerformances(Resource):
 
 class Events(Resource):
     def get(self):
+        cache_path = os.path.join(current_app.root_path, "cache")
         year = request.args.get("year")
         if not year:
             return {"status": "failed", "value": "parameter 'year' was not specified"}
-
-        cached_file = f"athletes/cache/events_{year}.json"
+        cache_path = os.path.join(current_app.root_path, "cache")
+        cached_file = os.path.join(cache_path, f"events_{year}.json")
         if os.path.exists(cached_file):
             with open(cached_file, "r") as f:
                 cache = json.load(f)
         else:
             cache = None
         if int(year) == datetime.now().year or not cache:
-            new_events = get_werder_results(year, cache=cache)
+            new_events = get_werder_results(year, cache_path=cache_path,
+                                            cache=cache)
         else:
             new_events = cache
 

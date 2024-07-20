@@ -140,7 +140,7 @@ def show_results(athletes, meeting_info):
     return print_out
 
 
-def get_werder_results(year, cache=None):
+def get_werder_results(year, cache_path, cache=None):
     load_dotenv()
     api_key = os.getenv('LADV-API-KEY')
     WERDER_NUMBER = 25
@@ -170,7 +170,7 @@ def get_werder_results(year, cache=None):
 
     if cache:
         events = cache + new_events
-    with open(f"athletes/cache/events_{year}.json", "w") as f:
+    with open(os.path.join(cache_path, f"events_{year}.json", "w")) as f:
         json.dump(events, f)
     return events
 

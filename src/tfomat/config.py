@@ -18,12 +18,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+
+
+
 class Config:
-    ENV = 'development'
+    ENV = "development"
     DEBUG = True
     SECRET_KEY = os.environ.get("SECRET_KEY", os.urandom(24))
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///database/database.db'
+    SQLALCHEMY_DATABASE_URI = f"sqlite:///{os.path.join(__file__.replace('config.py', ''), 'database/database.db')}"
     API_KEY = os.getenv("API-KEY")
     LADV_API_KEY = os.getenv("LADV-API-KEY")
     CLUB_NAME = "SV Werder Bremen"

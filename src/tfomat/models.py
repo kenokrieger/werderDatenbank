@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from tfomat import db
 from tfomat.map import map_to_number, get_season_start, \
     INVERSE_DISCIPLINE_MAPPER
-from tfomat.ladv_scraper import ladv
+from tfomat import ladv_scraper as ladv
 
 
 class Athlete(db.Model):

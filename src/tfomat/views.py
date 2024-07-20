@@ -1,20 +1,21 @@
 import json
 import os
+from datetime import datetime
 from hmac import compare_digest
+
 from flask import Blueprint, render_template, request, url_for, redirect, \
     send_from_directory, current_app, abort
-from flask_restful import Resource
 from flask_nav import Nav
 from flask_nav.elements import Navbar, View
-from datetime import datetime
-
-from athletes import db
-from athletes.models.models import Athlete, Performance, ASCENDING, \
-    QualificationNorm
-from athletes.scraping.ladv import find_results, get_werder_results, \
+from flask_restful import Resource
+from tfomat import db
+from tfomat.ladv_scraper import find_results, get_werder_results, \
     get_werder_events, get_athlete_info, get_ladv_id
-from athletes.map import map_discipline, DISCIPLINE_MAPPER, map_to_number, INVERSE_DISCIPLINE_MAPPER
-from athletes.latex import make_pdf
+from tfomat.map import map_discipline, DISCIPLINE_MAPPER, map_to_number, \
+    INVERSE_DISCIPLINE_MAPPER
+from tfomat.models import Athlete, Performance, ASCENDING, \
+    QualificationNorm
+from tfomat.print import make_pdf
 
 nav = Nav()
 views = Blueprint('views', __name__)

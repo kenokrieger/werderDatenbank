@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta
 from collections import namedtuple
-from athletes.scraping import ladv
+from datetime import datetime, timedelta
 
-from athletes import db
-from athletes.map import map_to_number, get_season_start, INVERSE_DISCIPLINE_MAPPER
+from tfomat import db
+from tfomat.map import map_to_number, get_season_start, \
+    INVERSE_DISCIPLINE_MAPPER
+from tfomat.ladv_scraper import ladv
 
 
 class Athlete(db.Model):

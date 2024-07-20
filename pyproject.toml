@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tfomat"
+version = "0.0.1"
+authors = [
+  { name="Keno Krieger", email="kriegerk@uni-bremen.de" },
+]
+description = "A package for fetching track and field results"
+readme = "README.md"
+license = "GPL-3.0-only"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+homepage = "https://github.com/kenokrieger/werderDatenbank"
+repository = "https://github.com/kenokrieger/werderDatenbank"
+issues = "https://github.com/kenokrieger/werderDatenbank/issues"

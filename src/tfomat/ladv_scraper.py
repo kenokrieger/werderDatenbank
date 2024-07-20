@@ -1,12 +1,24 @@
+# Copyright (C) 2024  Keno Krieger <kriegerk@uni-bremen.de>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+import json
 import os
+import re
 from datetime import datetime
 
-from dotenv import load_dotenv
 import requests
 from bs4 import BeautifulSoup
-import re
-import json
-
+from dotenv import load_dotenv
 
 LADV_RESULT_URL = "https://ladv.de/ergebnisse/{}/"
 CLUB_NAME = "SV Werder Bremen"

@@ -1,3 +1,4 @@
+"""Initialize Flask app."""
 # Copyright (C) 2024  Keno Krieger <kriegerk@uni-bremen.de>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -11,21 +12,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
-import os
+from tfomat import init_app
 
-from dotenv import load_dotenv
-
-load_dotenv()
+app = init_app()
 
 
-class Config:
-    ENV = "development"
-    DEBUG = True
-    SECRET_KEY = os.environ.get("SECRET_KEY", os.urandom(24))
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_DATABASE_URI = "sqlite:///" + os.path.join(os.getcwd(),"database.db")
-    API_KEY = os.getenv("API-KEY")
-    LADV_API_KEY = os.getenv("LADV-API-KEY")
-    CLUB_NAME = "SV Werder Bremen"
-    CLUB_ID = 25
-    PORT = 5000
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=app.config["PORT"],
+            debug=app.config["DEBUG"])

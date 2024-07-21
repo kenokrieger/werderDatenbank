@@ -1,10 +1,13 @@
 from collections import namedtuple
 from datetime import datetime, timedelta
 
-from tfomat import db
+from flask_sqlalchemy import SQLAlchemy
 from tfomat.map import map_to_number, get_season_start, \
     INVERSE_DISCIPLINE_MAPPER
 from tfomat import ladv_scraper as ladv
+
+# Database setup
+db = SQLAlchemy()
 
 
 class Athlete(db.Model):

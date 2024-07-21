@@ -170,7 +170,7 @@ def get_werder_results(year, cache_path, cache=None):
 
     if cache:
         events = cache + new_events
-    with open(os.path.join(cache_path, f"events_{year}.json", "w")) as f:
+    with open(os.path.join(cache_path, f"events_{year}.json"), "w") as f:
         json.dump(events, f)
     return events
 

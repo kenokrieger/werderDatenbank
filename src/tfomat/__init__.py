@@ -18,10 +18,8 @@ from os.path import join, exists
 from flask import Flask
 from flask_bootstrap import Bootstrap
 from flask_restful import Api
-from flask_sqlalchemy import SQLAlchemy
 
-# Database setup
-db = SQLAlchemy()
+from tfomat.models import db
 
 
 def init_app():
@@ -30,7 +28,8 @@ def init_app():
     Bootstrap(app)
     app.config.from_object('tfomat.config.Config')
     cache_path = join(app.root_path, "cache")
-    if not exists(cache_path): mkdir(cache_path)
+    if not exists(cache_path):
+        mkdir(cache_path)
     db.init_app(app)
 
     with app.app_context():
@@ -45,4 +44,4 @@ def init_app():
 
 def _up():
     app = init_app()
-    app.run()
+    app.run(port=app.config["PORT"])

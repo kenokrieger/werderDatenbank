@@ -9,7 +9,7 @@ from flask_nav import Nav
 from flask_nav.elements import Navbar, View
 from flask_restful import Resource
 from tfomat import db
-from tfomat.ladv_scraper import find_results, get_werder_results, \
+from tfomat.ladv_scraper import find_results, get_club_results, \
     get_werder_events, get_athlete_info, get_ladv_id
 from tfomat.map import map_discipline, DISCIPLINE_MAPPER, map_to_number, \
     INVERSE_DISCIPLINE_MAPPER
@@ -637,8 +637,11 @@ class Events(Resource):
         else:
             cache = None
         if int(year) == datetime.now().year or not cache:
-            new_events = get_werder_results(year, cache_path=cache_path,
-                                            cache=cache)
+            club_id = current_app.config["CLUB_ID"]
+            lv = current_app.config["LV"]
+            ladv_key = current_app.config["LADV-API-KEY"]
+            new_events = get_club_results(club_id, lv, ladv_key, year,
+                                          cache_path=cache_path, cache=cache)
         else:
             new_events = cache
 

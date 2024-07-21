@@ -28,4 +28,5 @@ class Config:
     LADV_API_KEY = os.getenv("LADV-API-KEY")
     CLUB_NAME = "SV Werder Bremen"
     CLUB_ID = 25
+    LV = "BR"
     PORT = 5000

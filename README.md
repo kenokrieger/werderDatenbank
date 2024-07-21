@@ -26,11 +26,11 @@ properly.
 
 Next up, you want to customise the application for your club. You can do so by
 editing the app's configuration found under `src/tfomat/config.py`. Here,
-change the variables `CLUB_NAME` and `CLUB_ID` to the name and the id of
-your club as listed in ladv (you can find out the club id by querying 
-`https://ladv.de/api/<api_key>/athletDetail?id=<athlete_id>` for any member of 
-the club and looking at the `vereinnumber` field of the response). 
-
+change the variables `CLUB_NAME`, `CLUB_ID` and `LV` to the name and id of
+your club and the federal association as listed in ladv (you can find out the
+club id by querying `https://ladv.de/api/<api_key>/athletDetail?id=<athlete_id>`
+for any member of the club and looking at the `vereinnumber` field of the
+response). 
 
 To use the pdf export of results, a suitable pdflatex installation is required.
 For example

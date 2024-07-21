@@ -1,4 +1,5 @@
 """Initialize Flask app."""
+import os
 # Copyright (C) 2024  Keno Krieger <kriegerk@uni-bremen.de>
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,6 +19,8 @@ from os.path import join, exists
 from flask import Flask
 from flask_bootstrap import Bootstrap
 from flask_restful import Api
+
+from dotenv import load_dotenv
 
 from tfomat.models import db
 
@@ -42,6 +45,28 @@ def init_app():
         return app
 
 
+def _check_env_variables():
+    load_dotenv()
+    api_key = os.getenv("API-KEY")
+    ladv_key = os.getenv("LADV-API-KEY")
+    if not api_key:
+        print(
+            "Could not find a valid API key for the application. "
+            "Please choose an API key by either specifying it in a "
+            ".env file or by setting the 'API-KEY' environment variable.\n\n"
+        )
+        return False
+    if not ladv_key:
+        print(
+            "WARNING: LADV-API-KEY not set! To integrate ladv within your "
+            "application please specify a valid API key in the '.env' file "
+            "or set the 'LADV-API-KEY' environment variable.\n\n"
+        )
+    return True
+
+
 def _up():
+    if not _check_env_variables():
+        return -1
     app = init_app()
     app.run(port=app.config["PORT"])

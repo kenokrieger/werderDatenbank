@@ -1,5 +1,5 @@
 from pylatex import Document, Section, MultiColumn, NewLine, \
-    MediumText, LargeText, LongTabu, NoEscape, Package, LongTable
+    MediumText, LargeText, LongTabu, NoEscape, Package
 from pylatex.utils import bold
 
 
